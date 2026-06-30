@@ -7,6 +7,20 @@ defmodule Beancount.GoldenTest do
     assert Golden.cases() != []
   end
 
+  test "cases/0 returns an empty list when the golden root is missing" do
+    original = File.cwd!()
+    empty = Path.join(System.tmp_dir!(), "golden_missing_#{System.unique_integer([:positive])}")
+    File.mkdir_p!(empty)
+
+    on_exit(fn ->
+      File.cd!(original)
+      File.rm_rf!(empty)
+    end)
+
+    File.cd!(empty)
+    assert Golden.cases() == []
+  end
+
   describe "ad-hoc case directory helpers" do
     setup do
       dir = Path.join(System.tmp_dir!(), "golden_helpers_#{System.unique_integer([:positive])}")

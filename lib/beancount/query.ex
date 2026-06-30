@@ -107,41 +107,60 @@ defmodule Beancount.Query do
   Parse RFC-4180-style CSV text into `{columns, rows}`.
 
   The first non-empty line is treated as the header. Empty input yields
-  `{[], []}`.
+  `{[], []}`. Quoted fields may contain embedded newlines.
   """
   @spec parse_csv(binary()) :: {[String.t()], [[String.t()]]}
   def parse_csv(csv) do
-    case csv |> String.trim() |> split_lines() do
+    trimmed = String.trim(csv)
+
+    case parse_rows(trimmed, [], [], "", false) do
       [] -> {[], []}
-      [header | rows] -> {parse_line(header), Enum.map(rows, &parse_line/1)}
+      [header | rows] -> {header, rows}
     end
   end
 
-  defp split_lines(text) do
-    text
-    |> String.split(~r/\r?\n/, trim: true)
-    |> Enum.reject(&(&1 == ""))
+  defp parse_rows("", rows, row, field, false) do
+    rows = finalize_row(rows, row, field)
+    Enum.reverse(rows)
   end
 
-  defp parse_line(line), do: parse_fields(line, "", [], false)
-
-  defp parse_fields(<<>>, current, acc, _in_quotes) do
-    Enum.reverse([current | acc])
+  defp parse_rows("", _rows, _row, _field, true) do
+    raise ArgumentError, "unclosed double quote in CSV field"
   end
 
-  defp parse_fields(<<?", ?", rest::binary>>, current, acc, true) do
-    parse_fields(rest, current <> "\"", acc, true)
+  defp parse_rows(<<?", ?", rest::binary>>, rows, row, field, true) do
+    parse_rows(rest, rows, row, field <> "\"", true)
   end
 
-  defp parse_fields(<<?", rest::binary>>, current, acc, in_quotes) do
-    parse_fields(rest, current, acc, not in_quotes)
+  defp parse_rows(<<?", rest::binary>>, rows, row, field, in_quotes) do
+    parse_rows(rest, rows, row, field, not in_quotes)
   end
 
-  defp parse_fields(<<?,, rest::binary>>, current, acc, false) do
-    parse_fields(rest, "", [current | acc], false)
+  defp parse_rows(<<?,, rest::binary>>, rows, row, field, false) do
+    parse_rows(rest, rows, row ++ [field], "", false)
   end
 
-  defp parse_fields(<<char::utf8, rest::binary>>, current, acc, in_quotes) do
-    parse_fields(rest, current <> <<char::utf8>>, acc, in_quotes)
+  defp parse_rows(<<?\r, ?\n, rest::binary>>, rows, row, field, false) do
+    parse_rows(rest, finalize_row(rows, row, field), [], "", false)
+  end
+
+  defp parse_rows(<<?\n, rest::binary>>, rows, row, field, false) do
+    parse_rows(rest, finalize_row(rows, row, field), [], "", false)
+  end
+
+  defp parse_rows(<<?\r, rest::binary>>, rows, row, field, false) do
+    parse_rows(rest, finalize_row(rows, row, field), [], "", false)
+  end
+
+  defp parse_rows(<<char::utf8, rest::binary>>, rows, row, field, in_quotes) do
+    parse_rows(rest, rows, row, field <> <<char::utf8>>, in_quotes)
+  end
+
+  defp finalize_row(rows, row, field) do
+    if row == [] and field == "" do
+      rows
+    else
+      [row ++ [field] | rows]
+    end
   end
 end

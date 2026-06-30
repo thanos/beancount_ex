@@ -27,6 +27,15 @@ defmodule Beancount.Engine do
               {:ok, Beancount.Result.t()} | {:error, Beancount.Result.t()}
 
   @doc """
+  Check a `.bean` file on disk, returning a normalized `Beancount.Result`.
+
+  Engines that shell out to CLI tools should preserve the file path so
+  `include` directives resolve relative to the ledger file.
+  """
+  @callback check_file(Path.t()) ::
+              {:ok, Beancount.Result.t()} | {:error, Beancount.Result.t()}
+
+  @doc """
   Run a BQL query against a `.bean` document.
 
   The first argument is the ledger text, the second is a Beancount Query

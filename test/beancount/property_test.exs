@@ -68,7 +68,7 @@ defmodule Beancount.PropertyTest do
     end
   end
 
-  test "compare/2 is a documented placeholder" do
+  test "compare/2 is a v0.3 placeholder" do
     assert Property.compare(Beancount.Engine.CLI, Beancount.Engine.CLI) == :not_implemented
   end
 end

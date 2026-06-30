@@ -115,10 +115,19 @@ defmodule Beancount.Renderer do
   def format_value(true), do: "TRUE"
   def format_value(false), do: "FALSE"
   def format_value(value) when is_integer(value), do: Integer.to_string(value)
-  def format_value(value) when is_atom(value), do: Atom.to_string(value)
+  def format_value(value) when is_atom(value) and value != nil, do: Atom.to_string(value)
 
   def format_value(value) when is_float(value) do
     value |> Decimal.from_float() |> format_decimal()
+  end
+
+  def format_value(nil) do
+    raise ArgumentError, "cannot render nil as a Beancount metadata/custom value"
+  end
+
+  def format_value(other) do
+    raise ArgumentError,
+          "unsupported Beancount value type #{inspect(other)}; use a scalar or Beancount.Value.* wrapper"
   end
 
   @doc """

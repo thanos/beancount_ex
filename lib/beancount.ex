@@ -28,7 +28,7 @@ defmodule Beancount do
   that namespace directly.
   """
 
-  alias Beancount.{Checker, CostSpec, Engine, Value}
+  alias Beancount.{CostSpec, Engine, Value}
 
   alias Beancount.Directives.{
     Balance,
@@ -50,7 +50,7 @@ defmodule Beancount do
   @typedoc "A renderable Beancount directive struct."
   @type directive :: Beancount.Directive.t()
 
-  # ── Directive constructors ────────────────────────────────────────────────
+  # Directive constructors
 
   @doc """
   Build an `open` directive.
@@ -353,7 +353,7 @@ defmodule Beancount do
     %Value.Amount{number: number, currency: currency}
   end
 
-  # ── Engine dispatch ───────────────────────────────────────────────────────
+  # Engine dispatch
 
   @doc """
   Render a directive stream to deterministic `.bean` text.
@@ -394,7 +394,7 @@ defmodule Beancount do
   """
   @spec check_file(Path.t()) :: {:ok, Beancount.Result.t()} | {:error, Beancount.Result.t()}
   def check_file(path) do
-    Checker.check_file(path)
+    Engine.configured().check_file(path)
   end
 
   @typedoc "A successful BQL query result or a failure result."
@@ -427,7 +427,7 @@ defmodule Beancount do
     path |> File.read!() |> query_text(bql)
   end
 
-  # ── Reporting (delegates to Beancount.Report) ─────────────────────────────
+  # Reporting (delegates to Beancount.Report)
 
   @doc "Account balances report. See `Beancount.Report.balances/1`."
   @spec balances([directive()] | binary()) :: query_return()

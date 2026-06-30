@@ -22,7 +22,7 @@ can be validated against Beancount's observable behavior.
 ## The plan
 
 ```
-v0.1  Beancount  ->  Engine.CLI     ->  Real Beancount      (this release)
+v0.1  Beancount  ->  Engine.CLI     ->  Real Beancount      (v0.1)
 v0.3  Beancount  ->  Engine.Elixir                          (native)
 v0.4  Beancount  ->  Engine.Rust                            (native, fast)
 ```

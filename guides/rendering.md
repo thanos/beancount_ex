@@ -24,15 +24,15 @@ iex> Beancount.render([Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"])])
 
 ## What is supported
 
-- **dates** — rendered as ISO-8601 `YYYY-MM-DD`.
-- **flags** — transaction flags (`*`, `!`) and per-posting flags.
-- **postings** — amounts right-aligned for readability.
-- **metadata** — `key: value` lines, emitted in sorted order for determinism.
-- **tags & links** — `#tag` and `^link` suffixes, sorted.
-- **commodities** — currency codes on postings, balances and prices.
-- **quoted strings** — payees, narrations, notes, documents, events, and
+- **dates** - rendered as ISO-8601 `YYYY-MM-DD`.
+- **flags** - transaction flags (`*`, `!`) and per-posting flags.
+- **postings** - amounts right-aligned for readability.
+- **metadata** - `key: value` lines, emitted in sorted order for determinism.
+- **tags & links** - `#tag` and `^link` suffixes, sorted.
+- **commodities** - currency codes on postings, balances and prices.
+- **quoted strings** - payees, narrations, notes, documents, events, and
   string metadata, with `"` and `\` escaped.
-- **cost & price annotations** — `{10.00 USD}` cost basis and `@`/`@@` prices.
+- **cost & price annotations** - `{10.00 USD}` cost basis and `@`/`@@` prices.
 
 ## Posting alignment
 

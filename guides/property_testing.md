@@ -6,13 +6,13 @@
 
 ## Generators
 
-- `account/0` — valid account names such as `Assets:Bank`.
-- `currency/0` — commodity codes.
-- `date/0` — `Date` values within a bounded range.
-- `amount/0` — positive `Decimal` amounts.
-- `metadata/0` — small metadata maps.
-- `balanced_transaction/0` — transactions whose postings always sum to zero.
-- `ledger/0` — a complete, valid ledger: `open` directives for every account
+- `account/0` - valid account names such as `Assets:Bank`.
+- `currency/0` - commodity codes.
+- `date/0` - `Date` values within a bounded range.
+- `amount/0` - positive `Decimal` amounts.
+- `metadata/0` - small metadata maps.
+- `balanced_transaction/0` - transactions whose postings always sum to zero.
+- `ledger/0` - a complete, valid ledger: `open` directives for every account
   used, followed by a balanced transaction.
 
 ## Properties

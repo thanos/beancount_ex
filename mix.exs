@@ -37,7 +37,7 @@ defmodule Beancount.MixProject do
 
   defp deps do
     [
-      {:decimal, "~> 2.1"},
+      {:decimal, "~> 3.1", override: true},
       {:jason, "~> 1.4"},
       {:explorer, "~> 0.9", optional: true},
       {:stream_data, "~> 1.0", only: [:test, :dev]},
@@ -110,7 +110,8 @@ defmodule Beancount.MixProject do
         "format --check-formatted",
         "compile --warnings-as-errors",
         "credo --strict",
-        "test"
+        "test",
+        "dialyzer --format short"
       ]
     ]
   end

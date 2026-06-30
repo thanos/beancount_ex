@@ -26,6 +26,25 @@ defmodule Mix.Tasks.Beancount.Golden.UpdateTest do
     assert before == after_run
   end
 
+  test "reports when no golden fixtures exist" do
+    original = File.cwd!()
+
+    empty =
+      Path.join(System.tmp_dir!(), "golden_update_empty_#{System.unique_integer([:positive])}")
+
+    File.mkdir_p!(empty)
+
+    on_exit(fn ->
+      File.cd!(original)
+      File.rm_rf!(empty)
+    end)
+
+    File.cd!(empty)
+
+    output = capture_io(fn -> Update.run([]) end)
+    assert output =~ "No golden fixtures found"
+  end
+
   test "regenerates expected.result.json when bean-check is available" do
     # Snapshot existing result files so we can restore the repo afterwards.
     snapshot = Map.new(Golden.cases(), fn dir -> {dir, File.read(Golden.result_path(dir))} end)

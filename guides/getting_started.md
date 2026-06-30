@@ -10,7 +10,7 @@ Add the dependency:
 ```elixir
 def deps do
   [
-    {:beancount_ex, "~> 0.1.0-pre"}
+    {:beancount_ex, "~> 0.2"}
   ]
 end
 ```
@@ -68,8 +68,8 @@ Beancount.check_file("ledger.bean")
 
 ## Next steps
 
-- [Rendering](rendering.md) — how directives become `.bean` text.
-- [Engines](engines.md) — swapping the execution backend.
-- [Golden Files](golden_files.md) — regression testing.
-- [Property Testing](property_testing.md) — generative testing.
-- [Oracle Strategy](oracle_strategy.md) — the long game.
+- [Rendering](rendering.md) - how directives become `.bean` text.
+- [Engines](engines.md) - swapping the execution backend.
+- [Golden Files](golden_files.md) - regression testing.
+- [Property Testing](property_testing.md) - generative testing.
+- [Oracle Strategy](oracle_strategy.md) - the long game.

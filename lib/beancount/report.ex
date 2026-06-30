@@ -74,7 +74,9 @@ defmodule Beancount.Report do
   defp run(ledger, bql) when is_list(ledger), do: ledger |> Beancount.render() |> run(bql)
   defp run(ledger, bql) when is_binary(ledger), do: Beancount.query_text(ledger, bql)
 
+  alias Beancount.Renderer
+
   defp quote_bql(value) do
-    "\"" <> String.replace(value, "\"", "\\\"") <> "\""
+    Renderer.quote_string(value)
   end
 end

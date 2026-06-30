@@ -35,6 +35,20 @@ defmodule Beancount.ReportTest do
     assert {:ok, %Result{}} = Beancount.Report.journal(@ledger, "Assets:Bank")
   end
 
+  test "journal/2 escapes backslashes in account names for BQL" do
+    capture_path = Path.join(System.tmp_dir!(), "bql_#{System.unique_integer([:positive])}.txt")
+    script = recording_bean_query!(capture_path)
+    original = Application.get_env(:beancount_ex, :bean_query_path)
+    Application.put_env(:beancount_ex, :bean_query_path, script)
+    on_exit(fn -> Application.put_env(:beancount_ex, :bean_query_path, original) end)
+
+    account = ~S(Assets\b"Bank)
+    assert {:ok, %Result{}} = Beancount.Report.journal(@ledger, account)
+
+    bql = File.read!(capture_path)
+    assert bql =~ "WHERE account = #{Beancount.Renderer.quote_string(account)}"
+  end
+
   test "public API delegations work" do
     assert {:ok, %Result{}} = Beancount.balances(@ledger)
     assert {:ok, %Result{}} = Beancount.balance_sheet(@ledger)
@@ -50,5 +64,22 @@ defmodule Beancount.ReportTest do
     File.write!(path, "2026-01-01 open Assets:Bank USD\n")
     on_exit(fn -> File.rm(path) end)
     assert {:ok, %Result{}} = Beancount.query_file(path, "SELECT account")
+  end
+
+  defp recording_bean_query!(capture_path) do
+    dir = Path.join(System.tmp_dir!(), "record_bq_#{System.unique_integer([:positive])}")
+    File.mkdir_p!(dir)
+    script = Path.join(dir, "bean-query")
+
+    File.write!(script, """
+    #!/bin/sh
+    for arg in "$@"; do bql="$arg"; done
+    printf '%s' "$bql" > "#{capture_path}"
+    printf 'account,balance\\r\\n'
+    exit 0
+    """)
+
+    File.chmod!(script, 0o755)
+    script
   end
 end

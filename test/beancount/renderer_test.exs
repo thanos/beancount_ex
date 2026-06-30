@@ -29,6 +29,11 @@ defmodule Beancount.RendererTest do
       assert Renderer.format_value(:Assets) == "Assets"
       assert Renderer.format_value(1.5) == "1.5"
     end
+
+    test "format_value/1 raises for nil and unsupported terms" do
+      assert_raise ArgumentError, fn -> Renderer.format_value(nil) end
+      assert_raise ArgumentError, fn -> Renderer.format_value([1, 2]) end
+    end
   end
 
   describe "metadata rendering" do

@@ -63,4 +63,8 @@ defmodule Beancount.CostSpecTest do
     spec = %CostSpec{label: "magic lot"}
     assert CostSpec.to_string(spec) == ~s({"magic lot"})
   end
+
+  test "to_string/1 raises for invalid cost spec" do
+    assert_raise ArgumentError, fn -> CostSpec.to_string(%CostSpec{merge: true}) end
+  end
 end

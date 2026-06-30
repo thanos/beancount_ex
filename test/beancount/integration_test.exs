@@ -100,11 +100,13 @@ defmodule Beancount.IntegrationTest do
     test "golden normalized result matches for #{@name}" do
       expected = Golden.expected_result(@case_dir)
 
-      if expected do
-        {_status, result} = Beancount.check_text(Golden.render(@case_dir))
-        actual = result.normalized |> Jason.encode!() |> Jason.decode!()
-        assert actual == expected
+      unless expected do
+        flunk("missing expected.result.json for #{@name}")
       end
+
+      {_status, result} = Beancount.check_text(Golden.render(@case_dir))
+      actual = result.normalized |> Jason.encode!() |> Jason.decode!()
+      assert actual == expected
     end
   end
 end

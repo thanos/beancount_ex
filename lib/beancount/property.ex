@@ -116,14 +116,7 @@ if Code.ensure_loaded?(StreamData) do
       end)
     end
 
-    @doc """
-    Placeholder for oracle/native engine comparison (v0.3).
-
-    Given two engines, this will eventually assert that they produce equivalent
-    normalized results for identical input. For now it documents the intended
-    contract and returns `:not_implemented`.
-    """
-    @spec compare(module(), module()) :: :not_implemented
+    @doc false
     def compare(_oracle, _native), do: :not_implemented
   end
 end

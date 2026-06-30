@@ -10,15 +10,21 @@ defmodule Beancount.Value do
   defmodule Account do
     @moduledoc "An account name rendered as a bareword, e.g. `Expenses:Food`."
     defstruct [:name]
+
+    @type t :: %__MODULE__{name: String.t()}
   end
 
   defmodule Tag do
     @moduledoc "A tag rendered with a leading `#`, e.g. `#trip`."
     defstruct [:name]
+
+    @type t :: %__MODULE__{name: String.t()}
   end
 
   defmodule Amount do
     @moduledoc "A commodity amount rendered as `NUMBER CURRENCY`."
     defstruct [:number, :currency]
+
+    @type t :: %__MODULE__{number: Decimal.t(), currency: String.t()}
   end
 end

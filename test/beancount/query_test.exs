@@ -23,6 +23,11 @@ defmodule Beancount.QueryTest do
       assert {["account", "balance"], [["Assets:Bank", "5000 USD"]]} = Query.parse_csv(csv)
     end
 
+    test "handles quoted fields with embedded newlines" do
+      csv = ~s(a,b\n"x\ny",z\n)
+      assert {["a", "b"], [["x\ny", "z"]]} = Query.parse_csv(csv)
+    end
+
     test "handles quoted fields with embedded commas and quotes" do
       csv = ~s(a,b\n"x,y","he said ""hi"""\n)
       assert {["a", "b"], [["x,y", ~s(he said "hi")]]} = Query.parse_csv(csv)
@@ -35,6 +40,16 @@ defmodule Beancount.QueryTest do
 
     test "header only yields no rows" do
       assert {["a", "b"], []} = Query.parse_csv("a,b\n")
+    end
+
+    test "raises on unclosed double quote" do
+      assert_raise ArgumentError, "unclosed double quote in CSV field", fn ->
+        Query.parse_csv(~s("open))
+      end
+    end
+
+    test "handles carriage-return line endings" do
+      assert {["a", "b"], [["x", "y"]]} = Query.parse_csv("a,b\rx,y\r")
     end
   end
 
@@ -77,6 +92,15 @@ defmodule Beancount.QueryTest do
       assert %Beancount.Result{status: :error, exit_status: 1} = result
       assert [%{message: message} | _] = result.normalized.errors
       assert message =~ "forced failure"
+    end
+
+    test "query_file/2 runs against a file on disk" do
+      path = Path.join(System.tmp_dir!(), "query_file_#{System.unique_integer([:positive])}.bean")
+      File.write!(path, "2026-01-01 open Assets:Bank USD\n")
+      on_exit(fn -> File.rm(path) end)
+
+      assert {:ok, result} = Query.query_file(path, "SELECT account, balance")
+      assert result.columns == ["account", "balance"]
     end
   end
 end

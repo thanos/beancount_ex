@@ -22,6 +22,9 @@ defmodule Beancount.Engine.CLI do
   def check(text) when is_binary(text), do: Checker.check_text(text)
 
   @impl Beancount.Engine
+  def check_file(path), do: Checker.check_file(path)
+
+  @impl Beancount.Engine
   def query(text, bql) when is_binary(text) and is_binary(bql) do
     Query.query_text(text, bql)
   end

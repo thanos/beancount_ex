@@ -9,8 +9,9 @@ defmodule Beancount.Result do
 
     * `:status` - `:ok` when the ledger is valid, `:error` otherwise.
     * `:exit_status` - the raw process exit status (`nil` for non-process engines).
-    * `:stdout` - captured standard output.
-    * `:stderr` - captured standard error.
+    * `:stdout` - captured standard output (CLI engines merge stderr here).
+    * `:stderr` - unused; kept for struct symmetry. CLI output is merged into
+      `:stdout` via `stderr_to_stdout: true`.
     * `:normalized` - engine-independent, structured view of the output
       produced by `Beancount.Normalizer`.
   """

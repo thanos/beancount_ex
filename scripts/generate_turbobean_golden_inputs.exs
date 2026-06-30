@@ -221,7 +221,7 @@ cases = %{
   ]
   """,
 
-  "booking_strict_fail" => """
+  "booking_strict_no_cost_spec" => """
   [
     Beancount.open(~D[2020-01-01], "Assets:Stocks", ["AAPL"], booking: "STRICT"),
     Beancount.open(~D[2020-01-01], "Assets:Cash"),
