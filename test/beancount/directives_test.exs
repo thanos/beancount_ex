@@ -198,4 +198,31 @@ defmodule Beancount.DirectivesTest do
 
     assert render(posting) =~ "{150 USD}"
   end
+
+  test "query directive" do
+    directive =
+      Beancount.query_directive(~D[2026-01-01], "monthly", "SELECT account",
+        metadata: %{
+          "author" => "me"
+        }
+      )
+
+    rendered = render(directive)
+
+    assert rendered =~ ~s(2026-01-01 query "monthly" "SELECT account")
+    assert rendered =~ ~s(author: "me")
+  end
+
+  test "plugin directive with and without config" do
+    assert render(Beancount.plugin("beancount.plugins.auto")) ==
+             ~s(plugin "beancount.plugins.auto")
+
+    assert render(Beancount.plugin("beancount.plugins.auto", "Assets:Cash")) ==
+             ~s(plugin "beancount.plugins.auto" "Assets:Cash")
+  end
+
+  test "pushtag and poptag directives" do
+    assert render(Beancount.push_tag("trip")) == "pushtag #trip"
+    assert render(Beancount.pop_tag("trip")) == "poptag #trip"
+  end
 end

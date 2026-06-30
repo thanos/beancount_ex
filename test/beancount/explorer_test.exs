@@ -30,4 +30,16 @@ defmodule Beancount.ExplorerTest do
     df = Beancount.Explorer.to_dataframe(%Result{columns: [], rows: []})
     assert Explorer.DataFrame.n_rows(df) == 0
   end
+
+  test "to_dataframe/1 supports Explorer series casting on numeric columns" do
+    result = %Result{
+      columns: ["account", "balance"],
+      rows: [["Assets:Bank", "5000"], ["Income:Salary", "-5000"]]
+    }
+
+    df = Beancount.Explorer.to_dataframe(result)
+    balance = Explorer.Series.cast(df["balance"], :integer)
+
+    assert Explorer.Series.sum(balance) == 0
+  end
 end

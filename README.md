@@ -34,7 +34,7 @@ system. By wrapping it behind a stable Elixir API, `beancount_ex`:
                                         │
                         ┌───────────────┴───────────────┐
                         ▼                               ▼
-              Engine.CLI (v0.1)            Engine.Elixir / Engine.Rust (future)
+              Engine.CLI (default)            Engine.Elixir (v0.3, opt-in)
 ```
 
 ## Installation
@@ -42,7 +42,7 @@ system. By wrapping it behind a stable Elixir API, `beancount_ex`:
 ```elixir
 def deps do
   [
-    {:beancount_ex, "~> 0.2"},
+    {:beancount_ex, "~> 0.3"},
     # optional: enables Beancount.Explorer.to_dataframe/1
     {:explorer, "~> 0.9"}
   ]
@@ -86,6 +86,9 @@ bean = Beancount.render(ledger)
 # Validation through the configured engine
 {:ok, result} = Beancount.check(ledger)
 
+# Parse `.bean` text (v0.3)
+{:ok, directives} = Beancount.parse_text(bean)
+
 # Query (BQL) and reports
 {:ok, result} = Beancount.query(ledger, "SELECT account, sum(position) GROUP BY account")
 {:ok, balances} = Beancount.balances(ledger)
@@ -121,6 +124,7 @@ mix beancount.golden.update   # regenerate golden fixtures
 ## Guides
 
 - [Getting Started](guides/getting_started.md)
+- [Parsing](guides/parsing.md)
 - [Rendering](guides/rendering.md)
 - [Engines](guides/engines.md)
 - [Querying](guides/querying.md)

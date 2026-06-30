@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-30
+
+Native parser, Elixir engine, and oracle comparison.
+
+### Added
+
+- `Beancount.Parser` with full Beancount grammar coverage (NimbleParsec).
+- Public parse API: `parse/1`, `parse_text/1`, `parse_file/1`, `parse!/1`.
+- New directives: `Query`, `Plugin`, `PushTag`, `PopTag` with constructors
+  `query_directive/3`, `plugin/2`, `push_tag/1`, `pop_tag/1`.
+- `Beancount.Engine.Elixir`: native structural `check/1` and canned `query/2`.
+- `Beancount.Compare.compare/3` and `Beancount.Property.Diff` for oracle ↔
+  native equivalence within the v0.3 parity contract.
+- Guide: `guides/parsing.md`.
+
+### Changed
+
+- `Beancount.Property.compare/3` replaces the v0.2 placeholder.
+- `decimal` dependency bumped to `~> 3.1` (security fix).
+- `Beancount.check_file/1` routes through the configured engine.
+
+[Unreleased]: https://github.com/beancount-ex/beancount_ex/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/beancount-ex/beancount_ex/compare/v0.2.0...v0.3.0
+
 ## [0.2.0] - 2026-06-30
 
 Adds querying and reporting on top of the v0.1 directive/render/check core.
@@ -53,6 +77,5 @@ Initial pre-release establishing the compatibility layer and behavioral oracle.
 - GitHub Actions CI running format, compile (warnings as errors), Credo,
   Dialyzer, tests, property tests and docs.
 
-[Unreleased]: https://github.com/beancount-ex/beancount_ex/compare/v0.2.0...HEAD
 [0.2.0]: https://github.com/beancount-ex/beancount_ex/compare/v0.1.0-pre...v0.2.0
 [0.1.0-pre]: https://github.com/beancount-ex/beancount_ex/releases/tag/v0.1.0-pre
