@@ -1,7 +1,7 @@
 defmodule Beancount.MixProject do
   use Mix.Project
 
-  @version "0.2.0"
+  @version "0.3.0"
   @source_url "https://github.com/beancount-ex/beancount_ex"
 
   def project do
@@ -39,6 +39,7 @@ defmodule Beancount.MixProject do
     [
       {:decimal, "~> 3.1", override: true},
       {:jason, "~> 1.4"},
+      {:nimble_parsec, "~> 1.4"},
       {:explorer, "~> 0.9", optional: true},
       {:stream_data, "~> 1.0", only: [:test, :dev]},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
@@ -70,6 +71,7 @@ defmodule Beancount.MixProject do
         "CHANGELOG.md",
         "LICENSE",
         "guides/getting_started.md",
+        "guides/parsing.md",
         "guides/rendering.md",
         "guides/engines.md",
         "guides/querying.md",
@@ -84,9 +86,15 @@ defmodule Beancount.MixProject do
         Guides: ~r/guides\/.?/
       ],
       groups_for_modules: [
-        "Public API": [Beancount],
+        "Public API": [Beancount, Beancount.Parser, Beancount.Compare],
         Directives: ~r/Beancount\.Directives\..*/,
-        Engine: [Beancount.Engine, Beancount.Engine.CLI, Beancount.Checker, Beancount.Query],
+        Engine: [
+          Beancount.Engine,
+          Beancount.Engine.CLI,
+          Beancount.Engine.Elixir,
+          Beancount.Checker,
+          Beancount.Query
+        ],
         Rendering: [Beancount.Directive, Beancount.Renderer],
         Reporting: [Beancount.Report, Beancount.Query.Result, Beancount.Explorer],
         Results: [Beancount.Result, Beancount.Normalizer],
@@ -112,7 +120,44 @@ defmodule Beancount.MixProject do
         "credo --strict",
         "test",
         "dialyzer --format short"
-      ]
+      ],
+      verify: &verify/1
     ]
+  end
+
+  defp verify(_) do
+    steps = [
+      {"compile --warnings-as-errors", :dev},
+      {"format", :dev},
+      {"format --check-formatted", :dev},
+      {"credo --strict", :dev},
+      # {"sobelow --exit Low", :dev},
+      {"dialyzer", :dev},
+      {"test --cover", :test},
+      {"docs --warnings-as-errors", :dev}
+    ]
+
+    Enum.each(steps, fn {task, env} ->
+      Mix.shell().info(IO.ANSI.format([:bright, "==> mix #{task}", :reset]))
+
+      mix_executable =
+        System.find_executable("mix") ||
+          Mix.raise("Could not find `mix` executable on PATH")
+
+      {_, exit_code} =
+        System.cmd(mix_executable, String.split(task),
+          env: [{"MIX_ENV", to_string(env)}],
+          into: IO.stream(:stdio, :line),
+          stderr_to_stdout: true
+        )
+
+      if exit_code != 0 do
+        Mix.raise("mix #{task} failed (exit code #{exit_code})")
+      end
+    end)
+
+    Mix.shell().info(
+      IO.ANSI.format([:green, :bright, "\nAll verification checks passed!", :reset])
+    )
   end
 end

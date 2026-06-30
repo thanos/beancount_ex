@@ -10,10 +10,10 @@ if Code.ensure_loaded?(StreamData) do
     This module is only compiled when `StreamData` is available (the `:test`
     and `:dev` environments).
 
-    ## Future oracle comparison
+    ## Oracle comparison (v0.3)
 
-    v0.3 will add an internal helper for validating a native engine against the
-    Beancount oracle on identical inputs.
+    Use `Beancount.Property.compare/3` (or `Beancount.Compare.compare/3`) to
+    validate a native engine against the CLI oracle on identical input.
     """
 
     import StreamData, except: [date: 0]
@@ -116,7 +116,15 @@ if Code.ensure_loaded?(StreamData) do
       end)
     end
 
-    @doc false
-    def compare(_oracle, _native), do: :not_implemented
+    @doc """
+    Compare two engines on identical input within the v0.3 parity contract.
+
+    Delegates to `Beancount.Compare.compare/3`.
+    """
+    @spec compare(module(), module(), Beancount.directive() | binary()) ::
+            {:ok, :equivalent} | {:error, Beancount.Property.Diff.t()}
+    def compare(oracle, native, input) do
+      Beancount.Compare.compare(oracle, native, input)
+    end
   end
 end

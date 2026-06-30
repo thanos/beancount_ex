@@ -22,9 +22,9 @@ config :beancount_ex, engine: Beancount.Engine.CLI
 `Beancount.render/1` and `Beancount.check/1` dispatch to
 `Beancount.Engine.configured/0`, so applications never call an engine directly.
 
-## The CLI engine (v0.1)
+## The CLI engine (default)
 
-`Beancount.Engine.CLI` is the initial engine. It:
+`Beancount.Engine.CLI` is the default engine. It:
 
 - delegates `render/1` to `Beancount.Renderer`,
 - delegates `check/1` to `Beancount.Checker`, which shells out to `bean-check`, and
@@ -54,12 +54,32 @@ possible.
 Because `query/2` is part of the behaviour, native engines must implement it
 too - keeping the oracle contract uniform across backends.
 
+## The Elixir engine (v0.3, opt-in)
+
+`Beancount.Engine.Elixir` is a native engine with **staged parity**:
+
+```elixir
+config :beancount_ex, engine: Beancount.Engine.Elixir
+```
+
+| Callback | v0.3 behaviour |
+|----------|----------------|
+| `render/1` | delegates to `Beancount.Renderer` |
+| `check/1` | parses text, then structural validation (opens/closes, syntactic per-currency balance) |
+| `query/2` | canned reports only (`balances`, `balance_sheet`, `income_statement`, `holdings`, `journal`) |
+
+Full inventory booking, balance-assertion evaluation, pad resolution, and
+arbitrary BQL are deferred to v0.4. Unsupported BQL returns
+`{:error, %Beancount.Result{}}` with a clear message.
+
+`Beancount.check_file/1` routes through the configured engine (read file →
+`check/1`).
+
 ## Future engines
 
-The roadmap includes native engines that implement the same behaviour:
+The roadmap also includes:
 
 ```
-Beancount.Engine.Elixir   # native Elixir
 Beancount.Engine.Rust     # native Rust (NIF/port)
 ```
 

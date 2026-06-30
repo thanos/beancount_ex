@@ -42,8 +42,12 @@ defmodule Beancount do
     Open,
     Option,
     Pad,
+    Plugin,
+    PopTag,
     Posting,
     Price,
+    PushTag,
+    Query,
     Transaction
   }
 
@@ -352,6 +356,62 @@ defmodule Beancount do
   def amount_value(%Decimal{} = number, currency) when is_binary(currency) do
     %Value.Amount{number: number, currency: currency}
   end
+
+  @doc """
+  Build a `query` directive storing a named BQL query in the ledger.
+  """
+  @spec query_directive(Date.t(), String.t(), String.t(), keyword()) :: Query.t()
+  def query_directive(date, name, bql, opts \\ []) when is_binary(name) and is_binary(bql) do
+    %Query{date: date, name: name, bql: bql, metadata: Keyword.get(opts, :metadata, %{})}
+  end
+
+  @doc """
+  Build a `plugin` directive.
+  """
+  @spec plugin(String.t(), String.t() | nil) :: Plugin.t()
+  def plugin(module, config \\ nil) when is_binary(module) do
+    %Plugin{module: module, config: config}
+  end
+
+  @doc """
+  Build a `pushtag` directive.
+  """
+  @spec push_tag(String.t()) :: PushTag.t()
+  def push_tag(tag) when is_binary(tag), do: %PushTag{tag: tag}
+
+  @doc """
+  Build a `poptag` directive.
+  """
+  @spec pop_tag(String.t()) :: PopTag.t()
+  def pop_tag(tag) when is_binary(tag), do: %PopTag{tag: tag}
+
+  # Parsing
+
+  @doc """
+  Parse a directive list or `.bean` text. See `Beancount.Parser.parse/1`.
+  """
+  @spec parse([directive()] | binary()) ::
+          {:ok, [directive()]} | {:error, Beancount.Parser.Error.t()}
+  defdelegate parse(input), to: Beancount.Parser
+
+  @doc """
+  Parse `.bean` text into directives. See `Beancount.Parser.parse_text/1`.
+  """
+  @spec parse_text(binary()) :: {:ok, [directive()]} | {:error, Beancount.Parser.Error.t()}
+  defdelegate parse_text(text), to: Beancount.Parser
+
+  @doc """
+  Parse a `.bean` file from disk. See `Beancount.Parser.parse_file/1`.
+  """
+  @spec parse_file(Path.t()) ::
+          {:ok, [directive()]} | {:error, Beancount.Parser.Error.t() | term()}
+  defdelegate parse_file(path), to: Beancount.Parser
+
+  @doc """
+  Parse `.bean` text, raising on failure. See `Beancount.Parser.parse!/1`.
+  """
+  @spec parse!(binary()) :: [directive()]
+  defdelegate parse!(text), to: Beancount.Parser
 
   # Engine dispatch
 

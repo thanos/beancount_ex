@@ -10,7 +10,7 @@ Add the dependency:
 ```elixir
 def deps do
   [
-    {:beancount_ex, "~> 0.2"}
+    {:beancount_ex, "~> 0.3"}
   ]
 end
 ```
