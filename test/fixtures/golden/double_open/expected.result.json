@@ -1,0 +1,13 @@
+{
+  "status": "error",
+  "errors": [
+    {
+      "line": null,
+      "message": "2025-11-22 open Assets:Foo"
+    },
+    {
+      "line": 3,
+      "message": "Duplicate open directive for Assets:Foo"
+    }
+  ]
+}

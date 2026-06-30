@@ -1,0 +1,89 @@
+{
+  "status": "error",
+  "errors": [
+    {
+      "line": null,
+      "message": "2025-11-23 balance Assets:Foo                                      1 EUR"
+    },
+    {
+      "line": null,
+      "message": "2025-11-23 balance Assets:Foo                                      1 EUR"
+    },
+    {
+      "line": null,
+      "message": "2025-11-23 balance Assets:Foo                                      1.1 USD"
+    },
+    {
+      "line": null,
+      "message": "2025-11-23 balance Assets:Foo                                      1.2 USD"
+    },
+    {
+      "line": null,
+      "message": "2025-11-23 balance Assets:Foo                                      1.2 USD   ; Diff: -0.2 USD"
+    },
+    {
+      "line": null,
+      "message": "2025-11-23 balance Assets:Foo                                      1.5 ~ 0.3 USD"
+    },
+    {
+      "line": null,
+      "message": "2025-11-23 balance Assets:Foo                                      1.5 ~ 0.3 USD   ; Diff: -0.5 USD"
+    },
+    {
+      "line": null,
+      "message": "2025-11-23 balance Assets:Foo                                      1.5 ~ 0.5 USD"
+    },
+    {
+      "line": null,
+      "message": "2025-11-23 balance Assets:Foo                                      2 USD"
+    },
+    {
+      "line": null,
+      "message": "2025-11-23 balance Assets:Foo                                      2 USD   ; Diff: -1 USD"
+    },
+    {
+      "line": 11,
+      "message": "Balance failed for 'Assets:Foo': expected 1 EUR != accumulated 0 EUR (1 too little)"
+    },
+    {
+      "line": 19,
+      "message": "Balance failed for 'Assets:Foo': expected 1.2 USD != accumulated 1 USD (0.2 too little)"
+    },
+    {
+      "line": 23,
+      "message": "Balance failed for 'Assets:Foo': expected 1.5 USD != accumulated 1 USD (0.5 too little)"
+    },
+    {
+      "line": 15,
+      "message": "Balance failed for 'Assets:Foo': expected 2 USD != accumulated 1 USD (1 too little)"
+    },
+    {
+      "line": 15,
+      "message": "Duplicate balance assertion with different amounts"
+    },
+    {
+      "line": 17,
+      "message": "Duplicate balance assertion with different amounts"
+    },
+    {
+      "line": 19,
+      "message": "Duplicate balance assertion with different amounts"
+    },
+    {
+      "line": 21,
+      "message": "Duplicate balance assertion with different amounts"
+    },
+    {
+      "line": 23,
+      "message": "Duplicate balance assertion with different amounts"
+    },
+    {
+      "line": 11,
+      "message": "Invalid currency 'EUR' for Balance directive:"
+    },
+    {
+      "line": 9,
+      "message": "Invalid token: 'Assets'"
+    }
+  ]
+}

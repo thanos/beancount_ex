@@ -1,0 +1,21 @@
+{
+  "status": "error",
+  "errors": [
+    {
+      "line": null,
+      "message": "2020-01-04 * \"Sell\""
+    },
+    {
+      "line": null,
+      "message": "Assets:Cash    450 USD"
+    },
+    {
+      "line": null,
+      "message": "Assets:Stocks  -15 AAPL {\"magic lot\"} @ 30 USD"
+    },
+    {
+      "line": 13,
+      "message": "Not enough lots to reduce \"-15 AAPL {\"magic lot\"}\": 10 AAPL {10 USD, 2020-01-02, \"magic lot\"}"
+    }
+  ]
+}

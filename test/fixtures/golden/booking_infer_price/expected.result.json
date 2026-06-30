@@ -1,0 +1,37 @@
+{
+  "status": "error",
+  "errors": [
+    {
+      "line": null,
+      "message": "2025-12-11 * \"Sell\""
+    },
+    {
+      "line": null,
+      "message": "2025-12-11 * \"Sell\""
+    },
+    {
+      "line": null,
+      "message": "Assets:Cash    15 USD"
+    },
+    {
+      "line": null,
+      "message": "Assets:Cash    20 USD"
+    },
+    {
+      "line": null,
+      "message": "Assets:Stocks  -5 AAPL {2 USD, 2025-12-10} @ 3 USD"
+    },
+    {
+      "line": null,
+      "message": "Assets:Stocks  -5 AAPL {4 USD}"
+    },
+    {
+      "line": 13,
+      "message": "No position matches \"Posting(account='Assets:Stocks', units=-5 AAPL, cost=CostSpec(number_per=Decimal('4'), number_total=None, currency='USD', date=None, label=None, merge=False), price=None, flag=None, meta={'filename': '<input>', 'lineno': 14})\" against balance (5 AAPL {2 USD, 2025-12-10})"
+    },
+    {
+      "line": 9,
+      "message": "Transaction does not balance: (5 USD)"
+    }
+  ]
+}

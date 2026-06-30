@@ -1,0 +1,50 @@
+# Getting started with beancount_ex
+
+```elixir
+Mix.install([
+  {:beancount_ex, "~> 0.2"},
+  {:explorer, "~> 0.9"},
+  {:kino, "~> 0.13"}
+])
+```
+
+## Build a ledger
+
+Constructors live directly on the `Beancount` module - you build a list of
+typed directive structs.
+
+```elixir
+ledger = [
+  Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"]),
+  Beancount.open(~D[2026-01-01], "Income:Salary", ["USD"]),
+  Beancount.transaction(~D[2026-01-31], "*", "Employer", "Salary", [
+    Beancount.posting("Assets:Bank", Decimal.new("5000"), "USD"),
+    Beancount.posting("Income:Salary", Decimal.new("-5000"), "USD")
+  ])
+]
+```
+
+## Render to Beancount text
+
+Rendering is deterministic.
+
+```elixir
+IO.puts(Beancount.render(ledger))
+```
+
+## Check the ledger
+
+This requires the Beancount toolchain (`pip install beancount`). The call
+dispatches through the configured engine.
+
+```elixir
+case Beancount.check(ledger) do
+  {:ok, result} -> result.status
+  {:error, result} -> result.normalized.errors
+end
+```
+
+## Next
+
+See the [reporting notebook](reporting.livemd) to turn a ledger into interactive
+tables with Explorer.

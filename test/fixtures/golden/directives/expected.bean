@@ -1,0 +1,22 @@
+2026-01-01 commodity USD
+
+2026-01-01 open Assets:Bank USD
+
+2026-01-01 open Expenses:Food USD
+
+2026-01-02 price USD 1.35 CAD
+
+2026-01-05 * "Groceries" "Weekly shop" #food ^receipt-1
+  category: "household"
+  Expenses:Food  42.50 USD
+  Assets:Bank   -42.50 USD
+
+2026-01-06 balance Assets:Bank  -42.50 USD
+
+2026-01-07 note Assets:Bank "Reconciled statement"
+
+2026-01-08 event "location" "New York"
+
+2026-01-09 custom "budget" "monthly" 400.00 "USD"
+
+2026-12-31 close Expenses:Food

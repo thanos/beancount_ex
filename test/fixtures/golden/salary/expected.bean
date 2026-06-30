@@ -1,0 +1,7 @@
+2026-01-01 open Assets:Bank USD
+
+2026-01-01 open Income:Salary USD
+
+2026-01-31 * "Employer" "Salary"
+  Assets:Bank     5000 USD
+  Income:Salary  -5000 USD
