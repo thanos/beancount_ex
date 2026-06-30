@@ -98,7 +98,7 @@ defmodule Beancount.Query do
       raise NotInstalledError,
         message:
           "bean-query executable not found at #{inspect(bean_query_path())}. " <>
-            "Install Beancount (`pip install beancount`) or configure " <>
+            "Install beanquery (`pip install beanquery`) or configure " <>
             ":beancount_ex, :bean_query_path."
     end
   end

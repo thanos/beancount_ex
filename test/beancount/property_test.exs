@@ -56,7 +56,7 @@ defmodule Beancount.PropertyTest do
   property "metadata/0 generates small string-valued maps" do
     check all(metadata <- Property.metadata()) do
       assert is_map(metadata)
-      assert map_size(metadata) <= 3
+      assert map_size(metadata) <= 2
       assert Enum.all?(metadata, fn {_key, value} -> is_binary(value) end)
     end
   end

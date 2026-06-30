@@ -1,9 +1,13 @@
 # Querying
 
 `beancount_ex` can run [Beancount Query Language](https://beancount.github.io/docs/beancount_query_language.html)
-(BQL) queries against a ledger through the configured engine. The v0.1 CLI
-engine shells out to `bean-query`; future native engines implement the same
-`c:Beancount.Engine.query/2` callback.
+(BQL) queries against a ledger through the configured engine. The v0.2 CLI
+engine shells out to `bean-query` from the [`beanquery`](https://github.com/beancount/beanquery)
+package; future native engines implement the same `c:Beancount.Engine.query/2`
+callback.
+
+Install with: `pip install beanquery` (Beancount v3 does not bundle `bean-query`
+in the `beancount` package alone).
 
 ## Running a query
 

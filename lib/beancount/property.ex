@@ -47,10 +47,10 @@ if Code.ensure_loaded?(StreamData) do
     @doc "Generate a small metadata map with string values."
     @spec metadata() :: StreamData.t(map())
     def metadata do
-      keys = member_of(~w(note ref category)a)
+      keys = member_of(~w(note ref category source import id type memo tag)a)
       values = string(:alphanumeric, min_length: 1, max_length: 12)
 
-      map_of(keys, values, max_length: 3)
+      map_of(keys, values, max_length: 2)
     end
 
     @doc """

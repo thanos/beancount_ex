@@ -53,8 +53,12 @@ To run checks and queries you also need Beancount installed (only required at
 runtime for `Beancount.check/1`, `Beancount.query/2` and friends):
 
 ```bash
-pip install beancount
+pip install beancount beanquery
 ```
+
+`bean-check` comes from the `beancount` package; `bean-query` comes from the
+separate [`beanquery`](https://github.com/beancount/beanquery) package (required
+for Beancount v3 query support).
 
 ## Usage
 

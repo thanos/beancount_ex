@@ -133,8 +133,12 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Beancount (provides bean-check and bean-query)
-        run: pip install beancount
+      - name: Install Beancount tooling (pipx)
+        run: |
+          python -m pip install --user pipx
+          echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+          pipx install beancount
+          pipx install beanquery
 
       - name: Install dependencies
         run: mix deps.get
