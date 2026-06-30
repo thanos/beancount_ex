@@ -327,4 +327,56 @@ defmodule Beancount do
   def check_file(path) do
     path |> File.read!() |> check_text()
   end
+
+  @typedoc "A successful BQL query result or a failure result."
+  @type query_return :: {:ok, Beancount.Query.Result.t()} | {:error, Beancount.Result.t()}
+
+  @doc """
+  Run a BQL query against a directive stream.
+
+  The directives are rendered to `.bean` text and the query is dispatched
+  through the configured engine's `c:Beancount.Engine.query/2`.
+  """
+  @spec query([directive()], binary()) :: query_return()
+  def query(directives, bql) when is_list(directives) and is_binary(bql) do
+    directives |> render() |> query_text(bql)
+  end
+
+  @doc """
+  Run a BQL query against raw `.bean` text through the configured engine.
+  """
+  @spec query_text(binary(), binary()) :: query_return()
+  def query_text(text, bql) when is_binary(text) and is_binary(bql) do
+    Engine.configured().query(text, bql)
+  end
+
+  @doc """
+  Run a BQL query against a `.bean` file on disk through the configured engine.
+  """
+  @spec query_file(Path.t(), binary()) :: query_return()
+  def query_file(path, bql) when is_binary(bql) do
+    path |> File.read!() |> query_text(bql)
+  end
+
+  # ── Reporting (delegates to Beancount.Report) ─────────────────────────────
+
+  @doc "Account balances report. See `Beancount.Report.balances/1`."
+  @spec balances([directive()] | binary()) :: query_return()
+  defdelegate balances(ledger), to: Beancount.Report
+
+  @doc "Balance sheet report. See `Beancount.Report.balance_sheet/1`."
+  @spec balance_sheet([directive()] | binary()) :: query_return()
+  defdelegate balance_sheet(ledger), to: Beancount.Report
+
+  @doc "Income statement report. See `Beancount.Report.income_statement/1`."
+  @spec income_statement([directive()] | binary()) :: query_return()
+  defdelegate income_statement(ledger), to: Beancount.Report
+
+  @doc "Holdings report. See `Beancount.Report.holdings/1`."
+  @spec holdings([directive()] | binary()) :: query_return()
+  defdelegate holdings(ledger), to: Beancount.Report
+
+  @doc "Per-account journal report. See `Beancount.Report.journal/2`."
+  @spec journal([directive()] | binary(), String.t()) :: query_return()
+  defdelegate journal(ledger, account), to: Beancount.Report
 end

@@ -1,7 +1,7 @@
 defmodule Beancount.MixProject do
   use Mix.Project
 
-  @version "0.1.0-pre"
+  @version "0.2.0"
   @source_url "https://github.com/beancount-ex/beancount_ex"
 
   def project do
@@ -39,6 +39,7 @@ defmodule Beancount.MixProject do
     [
       {:decimal, "~> 2.1"},
       {:jason, "~> 1.4"},
+      {:explorer, "~> 0.9", optional: true},
       {:stream_data, "~> 1.0", only: [:test, :dev]},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
@@ -71,9 +72,13 @@ defmodule Beancount.MixProject do
         "guides/getting_started.md",
         "guides/rendering.md",
         "guides/engines.md",
+        "guides/querying.md",
+        "guides/reporting.md",
         "guides/golden_files.md",
         "guides/property_testing.md",
-        "guides/oracle_strategy.md"
+        "guides/oracle_strategy.md",
+        "guides/livebook/getting_started.livemd",
+        "guides/livebook/reporting.livemd"
       ],
       groups_for_extras: [
         Guides: ~r/guides\/.?/
@@ -81,8 +86,9 @@ defmodule Beancount.MixProject do
       groups_for_modules: [
         "Public API": [Beancount],
         Directives: ~r/Beancount\.Directives\..*/,
-        Engine: [Beancount.Engine, Beancount.Engine.CLI, Beancount.Checker],
+        Engine: [Beancount.Engine, Beancount.Engine.CLI, Beancount.Checker, Beancount.Query],
         Rendering: [Beancount.Directive, Beancount.Renderer],
+        Reporting: [Beancount.Report, Beancount.Query.Result, Beancount.Explorer],
         Results: [Beancount.Result, Beancount.Normalizer],
         Testing: [Beancount.Golden, Beancount.Property]
       ],

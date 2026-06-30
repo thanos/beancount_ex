@@ -4,7 +4,8 @@ import Config
 # The public `Beancount.*` API never changes when the engine is swapped.
 config :beancount_ex,
   engine: Beancount.Engine.CLI,
-  bean_check_path: "bean-check"
+  bean_check_path: "bean-check",
+  bean_query_path: "bean-query"
 
 if File.exists?(Path.join(__DIR__, "#{config_env()}.exs")) do
   import_config "#{config_env()}.exs"

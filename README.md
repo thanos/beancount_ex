@@ -8,10 +8,10 @@ An idiomatic Elixir interface to [Beancount](https://beancount.github.io/).
 > long-term *behavioral oracle* for a future native Elixir General Ledger.
 
 `beancount_ex` lets you build Beancount directives as typed Elixir structs,
-render them to deterministic `.bean` text, and validate them through a
-configurable engine. Today that engine wraps the real Beancount toolchain
-(`bean-check`). Tomorrow a native Elixir (and later Rust) engine can replace it
-**without changing the public API**.
+render them to deterministic `.bean` text, validate them, and run BQL queries /
+reports through a configurable engine. Today that engine wraps the real
+Beancount toolchain (`bean-check`, `bean-query`). Tomorrow a native Elixir (and
+later Rust) engine can replace it **without changing the public API**.
 
 ## Why this library exists
 
@@ -42,13 +42,15 @@ system. By wrapping it behind a stable Elixir API, `beancount_ex`:
 ```elixir
 def deps do
   [
-    {:beancount_ex, "~> 0.1.0-pre"}
+    {:beancount_ex, "~> 0.2"},
+    # optional: enables Beancount.Explorer.to_dataframe/1
+    {:explorer, "~> 0.9"}
   ]
 end
 ```
 
-To run checks you also need Beancount installed (only required at runtime for
-`Beancount.check/1` and friends):
+To run checks and queries you also need Beancount installed (only required at
+runtime for `Beancount.check/1`, `Beancount.query/2` and friends):
 
 ```bash
 pip install beancount
@@ -79,6 +81,13 @@ bean = Beancount.render(ledger)
 
 # Validation through the configured engine
 {:ok, result} = Beancount.check(ledger)
+
+# Query (BQL) and reports
+{:ok, result} = Beancount.query(ledger, "SELECT account, sum(position) GROUP BY account")
+{:ok, balances} = Beancount.balances(ledger)
+
+# Optional: turn a result into an Explorer.DataFrame (renders in Livebook)
+# df = Beancount.Explorer.to_dataframe(balances)
 ```
 
 The public API is `Beancount`. There is intentionally **no** public
@@ -90,7 +99,8 @@ The public API is `Beancount`. There is intentionally **no** public
 ```elixir
 config :beancount_ex,
   engine: Beancount.Engine.CLI,
-  bean_check_path: "bean-check"
+  bean_check_path: "bean-check",
+  bean_query_path: "bean-query"
 ```
 
 ## Testing
@@ -109,9 +119,12 @@ mix beancount.golden.update   # regenerate golden fixtures
 - [Getting Started](guides/getting_started.md)
 - [Rendering](guides/rendering.md)
 - [Engines](guides/engines.md)
+- [Querying](guides/querying.md)
+- [Reporting](guides/reporting.md)
 - [Golden Files](guides/golden_files.md)
 - [Property Testing](guides/property_testing.md)
 - [Oracle Strategy](guides/oracle_strategy.md)
+- Livebook: [Getting Started](guides/livebook/getting_started.livemd), [Reporting](guides/livebook/reporting.livemd)
 
 ## License
 

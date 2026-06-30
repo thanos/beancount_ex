@@ -8,6 +8,8 @@ defmodule Beancount.Engine do
   @callback render(term()) :: binary()
   @callback check(binary()) ::
               {:ok, Beancount.Result.t()} | {:error, Beancount.Result.t()}
+  @callback query(binary(), binary()) ::
+              {:ok, Beancount.Query.Result.t()} | {:error, Beancount.Result.t()}
 end
 ```
 
@@ -24,25 +26,33 @@ config :beancount_ex, engine: Beancount.Engine.CLI
 
 `Beancount.Engine.CLI` is the initial engine. It:
 
-- delegates `render/1` to `Beancount.Renderer`, and
-- delegates `check/1` to `Beancount.Checker`, which shells out to `bean-check`.
+- delegates `render/1` to `Beancount.Renderer`,
+- delegates `check/1` to `Beancount.Checker`, which shells out to `bean-check`, and
+- delegates `query/2` to `Beancount.Query`, which shells out to `bean-query`.
 
-The `bean-check` binary is configurable:
+The binaries are configurable:
 
 ```elixir
-config :beancount_ex, bean_check_path: "bean-check"
+config :beancount_ex,
+  bean_check_path: "bean-check",
+  bean_query_path: "bean-query"
 ```
 
-If the binary cannot be found, `Beancount.Checker` raises
-`Beancount.Checker.NotInstalledError`. This is deliberately distinct from a
-ledger that *fails* validation (which returns `{:error, %Beancount.Result{}}`)
-so that environment problems are never confused with accounting errors.
+If a binary cannot be found, the relevant wrapper raises
+`Beancount.Checker.NotInstalledError` / `Beancount.Query.NotInstalledError`.
+This is deliberately distinct from a ledger that *fails* validation or a query
+that *fails* (which return `{:error, %Beancount.Result{}}`) so that environment
+problems are never confused with accounting errors.
 
 ## Results are engine-independent
 
-Every engine populates the same `Beancount.Result` struct, and
-`Beancount.Normalizer` produces a stable, backend-independent view of the
-output. This normalization is what makes cross-engine comparison possible.
+Every engine populates the same `Beancount.Result` and `Beancount.Query.Result`
+structs, and `Beancount.Normalizer` produces a stable, backend-independent view
+of the output. This normalization is what makes cross-engine comparison
+possible.
+
+Because `query/2` is part of the behaviour, native engines must implement it
+too - keeping the oracle contract uniform across backends.
 
 ## Future engines
 

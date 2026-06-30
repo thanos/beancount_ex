@@ -10,10 +10,19 @@ defmodule Beancount.IntegrationTest do
   use ExUnit.Case, async: false
   use ExUnitProperties
 
-  alias Beancount.{Checker, Golden}
+  alias Beancount.{Checker, Golden, Query}
 
   @moduletag :integration
   @moduletag :beancount
+
+  @ledger [
+    Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"]),
+    Beancount.open(~D[2026-01-01], "Income:Salary", ["USD"]),
+    Beancount.transaction(~D[2026-01-31], "*", "Employer", "Salary", [
+      Beancount.posting("Assets:Bank", Decimal.new("5000"), "USD"),
+      Beancount.posting("Income:Salary", Decimal.new("-5000"), "USD")
+    ])
+  ]
 
   setup do
     unless Checker.available?() do
@@ -52,6 +61,35 @@ defmodule Beancount.IntegrationTest do
   property "generated ledgers pass bean-check" do
     check all(ledger <- Beancount.Property.ledger(), max_runs: 25) do
       assert {:ok, %Beancount.Result{status: :ok}} = Beancount.check(ledger)
+    end
+  end
+
+  describe "bean-query (requires bean-query)" do
+    setup do
+      unless Query.available?() do
+        raise "bean-query not available; install Beancount to run query integration tests"
+      end
+
+      :ok
+    end
+
+    test "query/2 returns account balances" do
+      assert {:ok, result} =
+               Beancount.query(@ledger, "SELECT account, sum(position) GROUP BY account")
+
+      accounts = Enum.map(result.rows, &List.first/1)
+      assert "Assets:Bank" in accounts
+      assert "Income:Salary" in accounts
+    end
+
+    test "balances/1 report runs" do
+      assert {:ok, result} = Beancount.balances(@ledger)
+      assert result.columns != []
+    end
+
+    test "an invalid BQL query returns an error result" do
+      assert {:error, %Beancount.Result{status: :error}} =
+               Beancount.query(@ledger, "SELECT not_a_real_column")
     end
   end
 

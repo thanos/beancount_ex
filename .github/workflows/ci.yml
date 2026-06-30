@@ -133,11 +133,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Beancount
+      - name: Install Beancount (provides bean-check and bean-query)
         run: pip install beancount
 
       - name: Install dependencies
         run: mix deps.get
 
-      - name: Integration tests
+      - name: Integration tests (check + query)
         run: mix test --include beancount

@@ -13,11 +13,16 @@ defmodule Beancount.Engine.CLI do
 
   @behaviour Beancount.Engine
 
-  alias Beancount.{Checker, Renderer}
+  alias Beancount.{Checker, Query, Renderer}
 
   @impl Beancount.Engine
   def render(directives) when is_list(directives), do: Renderer.render(directives)
 
   @impl Beancount.Engine
   def check(text) when is_binary(text), do: Checker.check_text(text)
+
+  @impl Beancount.Engine
+  def query(text, bql) when is_binary(text) and is_binary(bql) do
+    Query.query_text(text, bql)
+  end
 end

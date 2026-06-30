@@ -27,6 +27,20 @@ defmodule Beancount.Engine do
               {:ok, Beancount.Result.t()} | {:error, Beancount.Result.t()}
 
   @doc """
+  Run a BQL query against a `.bean` document.
+
+  The first argument is the ledger text, the second is a Beancount Query
+  Language (BQL) string. Returns a neutral, engine-independent
+  `Beancount.Query.Result` on success, or a `Beancount.Result` describing the
+  failure otherwise.
+
+  Every engine - including future native engines - must implement this so the
+  oracle contract stays uniform across backends.
+  """
+  @callback query(binary(), binary()) ::
+              {:ok, Beancount.Query.Result.t()} | {:error, Beancount.Result.t()}
+
+  @doc """
   Return the currently configured engine module.
 
   ## Examples

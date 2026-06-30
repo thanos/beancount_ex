@@ -1,0 +1,67 @@
+# Reporting with beancount_ex and Explorer
+
+```elixir
+Mix.install([
+  {:beancount_ex, "~> 0.2"},
+  {:explorer, "~> 0.9"},
+  {:kino, "~> 0.13"}
+])
+```
+
+## A sample ledger
+
+```elixir
+ledger = [
+  Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"]),
+  Beancount.open(~D[2026-01-01], "Income:Salary", ["USD"]),
+  Beancount.open(~D[2026-01-01], "Expenses:Rent", ["USD"]),
+  Beancount.transaction(~D[2026-01-31], "*", "Employer", "Salary", [
+    Beancount.posting("Assets:Bank", Decimal.new("5000"), "USD"),
+    Beancount.posting("Income:Salary", Decimal.new("-5000"), "USD")
+  ]),
+  Beancount.transaction(~D[2026-02-01], "*", "Landlord", "February rent", [
+    Beancount.posting("Expenses:Rent", Decimal.new("1500"), "USD"),
+    Beancount.posting("Assets:Bank", Decimal.new("-1500"), "USD")
+  ])
+]
+```
+
+## Balances as a DataFrame
+
+`Beancount.balances/1` returns a `Beancount.Query.Result`; the optional Explorer
+bridge converts it into a `DataFrame`, which Livebook renders as an interactive
+table. (Requires the Beancount `bean-query` tool installed.)
+
+```elixir
+{:ok, result} = Beancount.balances(ledger)
+Beancount.Explorer.to_dataframe(result)
+```
+
+## Income statement
+
+```elixir
+{:ok, result} = Beancount.income_statement(ledger)
+Beancount.Explorer.to_dataframe(result)
+```
+
+## A custom BQL query
+
+```elixir
+{:ok, result} =
+  Beancount.query(ledger, "SELECT account, sum(position) GROUP BY account ORDER BY account")
+
+Beancount.Explorer.to_dataframe(result)
+```
+
+## Render with Kino explicitly
+
+A DataFrame returned as the last value renders automatically, but you can also
+build a table widget yourself:
+
+```elixir
+{:ok, result} = Beancount.balances(ledger)
+
+result
+|> Beancount.Query.Result.to_maps()
+|> Kino.DataTable.new()
+```
