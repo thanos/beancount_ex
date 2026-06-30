@@ -12,8 +12,8 @@ if Code.ensure_loaded?(StreamData) do
 
     ## Future oracle comparison
 
-    `compare/2` is a placeholder for the v0.3 strategy of validating a native
-    engine against the Beancount oracle on identical inputs.
+    v0.3 will add an internal helper for validating a native engine against the
+    Beancount oracle on identical inputs.
     """
 
     import StreamData, except: [date: 0]

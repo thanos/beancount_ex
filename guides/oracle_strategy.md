@@ -39,10 +39,10 @@ on v0.1 keep working unchanged when the engine is swapped.
    normalization strips backend-specific noise (such as temp file paths), the
    comparison focuses on accounting semantics.
 
-`Beancount.Property.compare/2` is the placeholder entry point for this
-workflow. Combined with golden files (deterministic, committed reference
-output) and property tests (broad, generated coverage), it gives two
-complementary safety nets for the native engine.
+A future oracle-comparison helper in `Beancount.Property` is the planned entry
+point for this workflow (v0.3). Combined with golden files (deterministic,
+committed reference output) and property tests (broad, generated coverage), it
+gives two complementary safety nets for the native engine.
 
 ## Stability promise
 

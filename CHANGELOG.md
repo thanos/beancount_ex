@@ -47,8 +47,8 @@ Initial pre-release establishing the compatibility layer and behavioral oracle.
 - Golden-file infrastructure (`Beancount.Golden`) and the
   `mix beancount.golden.update` task.
 - Property-testing infrastructure (`Beancount.Property`) built on `StreamData`,
-  including a placeholder `Beancount.Property.compare/2` for future oracle
-  comparison.
+  including a planned oracle-comparison helper in `Beancount.Property` for
+  future engine validation.
 - Documentation: README, guides, and HexDocs-ready module docs with doctests.
 - GitHub Actions CI running format, compile (warnings as errors), Credo,
   Dialyzer, tests, property tests and docs.

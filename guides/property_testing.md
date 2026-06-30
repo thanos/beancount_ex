@@ -42,12 +42,6 @@ The suite verifies the core invariants:
 
 ## Future: oracle comparison
 
-`Beancount.Property.compare/2` is a placeholder for the v0.3 strategy of
-asserting that a native engine produces equivalent normalized results to the
-Beancount oracle for identical inputs:
-
-```elixir
-Beancount.Property.compare(Beancount.Engine.CLI, Beancount.Engine.Elixir)
-```
-
-Today it returns `:not_implemented`; see [Oracle Strategy](oracle_strategy.md).
+v0.3 will add an internal helper in `Beancount.Property` for asserting that a
+native engine produces equivalent normalized results to the Beancount oracle
+for identical inputs. See [Oracle Strategy](oracle_strategy.md).
