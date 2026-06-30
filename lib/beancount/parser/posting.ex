@@ -51,38 +51,27 @@ defmodule Beancount.Parser.Posting do
   end
 
   defp parse_amount_currency(rest, opts) do
-    rest = String.trim(rest)
+    case String.trim(rest) do
+      "" -> {:ok, nil, nil, ""}
+      trimmed -> parse_amount_currency_tokens(Lexer.split_tokens(trimmed), opts)
+    end
+  end
 
-    if rest == "" do
-      {:ok, nil, nil, ""}
-    else
-      tokens = Lexer.split_tokens(rest)
+  defp parse_amount_currency_tokens([number | tail], opts) do
+    case Lexer.parse_number(number) do
+      {:ok, amount, ""} -> parse_amount_with_tail(amount, tail)
+      _ -> parse_commodity_price([number | tail], opts)
+    end
+  end
 
-      case tokens do
-        [number | tail] ->
-          case Lexer.parse_number(number) do
-            {:ok, amount, ""} ->
-              case tail do
-                [currency | rest] ->
-                  case Lexer.parse_commodity(currency) do
-                    {:ok, _, ""} ->
-                      {:ok, amount, currency, Enum.join(rest, " ")}
+  defp parse_amount_currency_tokens(tokens, opts), do: parse_commodity_price(tokens, opts)
 
-                    _ ->
-                      {:ok, amount, nil, Enum.join(tail, " ")}
-                  end
+  defp parse_amount_with_tail(amount, []), do: {:ok, amount, nil, ""}
 
-                [] ->
-                  {:ok, amount, nil, ""}
-              end
-
-            _ ->
-              parse_commodity_price(tokens, opts)
-          end
-
-        _ ->
-          parse_commodity_price(tokens, opts)
-      end
+  defp parse_amount_with_tail(amount, [currency | rest]) do
+    case Lexer.parse_commodity(currency) do
+      {:ok, _, ""} -> {:ok, amount, currency, Enum.join(rest, " ")}
+      _ -> {:ok, amount, nil, Enum.join([currency | rest], " ")}
     end
   end
 
@@ -104,17 +93,21 @@ defmodule Beancount.Parser.Posting do
     rest = String.trim_leading(rest)
 
     if String.starts_with?(rest, "{") do
-      case extract_braced(rest) do
-        {:ok, braced, tail} ->
-          with {:ok, cost} <- Cost.parse(braced, opts) do
-            {:ok, cost, String.trim_leading(tail)}
-          end
-
-        :error ->
-          error("unclosed cost spec", opts)
-      end
+      parse_braced_cost(rest, opts)
     else
       {:ok, nil, rest}
+    end
+  end
+
+  defp parse_braced_cost(rest, opts) do
+    case extract_braced(rest) do
+      {:ok, braced, tail} ->
+        with {:ok, cost} <- Cost.parse(braced, opts) do
+          {:ok, cost, String.trim_leading(tail)}
+        end
+
+      :error ->
+        error("unclosed cost spec", opts)
     end
   end
 
@@ -125,16 +118,10 @@ defmodule Beancount.Parser.Posting do
 
     cond do
       String.starts_with?(rest, "@@") ->
-        with {:ok, price, tail} <-
-               parse_price_amount(String.trim_leading(String.slice(rest, 2..-1//1)), :total, opts) do
-          {:ok, price, tail}
-        end
+        parse_price_amount(String.trim_leading(String.slice(rest, 2..-1//1)), :total, opts)
 
       String.starts_with?(rest, "@") ->
-        with {:ok, price, tail} <-
-               parse_price_amount(String.trim_leading(String.slice(rest, 1..-1//1)), :unit, opts) do
-          {:ok, price, tail}
-        end
+        parse_price_amount(String.trim_leading(String.slice(rest, 1..-1//1)), :unit, opts)
 
       true ->
         {:ok, nil, rest}

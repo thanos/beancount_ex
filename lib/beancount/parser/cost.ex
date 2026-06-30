@@ -37,7 +37,7 @@ defmodule Beancount.Parser.Cost do
   end
 
   defp parse_braced_tokens([date | rest], opts) do
-    if is_date_token?(date) do
+    if date_token?(date) do
       with {:ok, date} <- parse_date_token(date, opts),
            {:ok, _extras, merge} <- parse_extras(rest, opts) do
         {:ok, %CostSpec{date: date, merge: merge}}
@@ -48,7 +48,7 @@ defmodule Beancount.Parser.Cost do
   end
 
   defp parse_braced_tokens_label_or_amount([label | rest], opts) do
-    if is_quoted?(label) do
+    if quoted_token?(label) do
       with {:ok, label} <- parse_quoted(label, opts),
            {:ok, _extras, merge} <- parse_extras(rest, opts) do
         {:ok, %CostSpec{label: label, merge: merge}}
@@ -60,33 +60,35 @@ defmodule Beancount.Parser.Cost do
 
   defp parse_braced_amount(tokens, opts) do
     with {:ok, per_amount, per_currency, rest} <- parse_amount_currency(tokens, opts) do
-      case rest do
-        ["#", amount, currency | extras] ->
-          with {:ok, total_amount} <- parse_number_token(amount, opts),
-               {:ok, total_currency} <- parse_commodity_token(currency, opts),
-               {:ok, _extras, merge} <- parse_extras(extras, opts) do
-            {:ok,
-             %CostSpec{
-               per_amount: per_amount,
-               per_currency: per_currency,
-               total_amount: total_amount,
-               total_currency: total_currency,
-               merge: merge
-             }}
-          end
+      parse_braced_amount_rest(per_amount, per_currency, rest, opts)
+    end
+  end
 
-        rest ->
-          with {:ok, date, label, merge} <- parse_per_extras(rest, opts) do
-            {:ok,
-             %CostSpec{
-               per_amount: per_amount,
-               per_currency: per_currency,
-               date: date,
-               label: label,
-               merge: merge
-             }}
-          end
-      end
+  defp parse_braced_amount_rest(per_amount, per_currency, ["#", amount, currency | extras], opts) do
+    with {:ok, total_amount} <- parse_number_token(amount, opts),
+         {:ok, total_currency} <- parse_commodity_token(currency, opts),
+         {:ok, _extras, merge} <- parse_extras(extras, opts) do
+      {:ok,
+       %CostSpec{
+         per_amount: per_amount,
+         per_currency: per_currency,
+         total_amount: total_amount,
+         total_currency: total_currency,
+         merge: merge
+       }}
+    end
+  end
+
+  defp parse_braced_amount_rest(per_amount, per_currency, rest, opts) do
+    with {:ok, date, label, merge} <- parse_per_extras(rest, opts) do
+      {:ok,
+       %CostSpec{
+         per_amount: per_amount,
+         per_currency: per_currency,
+         date: date,
+         label: label,
+         merge: merge
+       }}
     end
   end
 
@@ -112,7 +114,7 @@ defmodule Beancount.Parser.Cost do
     {date, rest} =
       case tokens do
         [token | rest] ->
-          if is_date_token?(token) do
+          if date_token?(token) do
             {:ok, date} = parse_date_token(token, opts)
             {date, rest}
           else
@@ -126,7 +128,7 @@ defmodule Beancount.Parser.Cost do
     {label, rest} =
       case rest do
         [token | rest] ->
-          if is_quoted?(token) do
+          if quoted_token?(token) do
             {:ok, label} = parse_quoted(token, opts)
             {label, rest}
           else
@@ -172,8 +174,10 @@ defmodule Beancount.Parser.Cost do
   defp ensure_empty([], _opts), do: :ok
   defp ensure_empty(_rest, opts), do: error("unexpected tokens in cost spec", opts)
 
-  defp is_date_token?(token), do: Regex.match?(~r/^\d{4}-\d{2}-\d{2}$/, token)
-  defp is_quoted?(token), do: String.starts_with?(token, "\"") and String.ends_with?(token, "\"")
+  defp date_token?(token), do: Regex.match?(~r/^\d{4}-\d{2}-\d{2}$/, token)
+
+  defp quoted_token?(token),
+    do: String.starts_with?(token, "\"") and String.ends_with?(token, "\"")
 
   defp parse_date_token(token, _opts), do: Date.from_iso8601(token)
   defp parse_number_token(token, opts), do: Lexer.parse_number(token) |> map_error(opts)

@@ -52,15 +52,13 @@ defmodule Beancount.Parser.Grammar do
         parse_lines(rest, line_no + 1, acc)
 
       undated_directive?(line) ->
-        with {:ok, directive, rest, next_line} <- parse_undated(line, rest, line_no),
-             {:ok, acc} <- parse_lines(rest, next_line, [directive | acc]) do
-          {:ok, acc}
+        with {:ok, directive, rest, next_line} <- parse_undated(line, rest, line_no) do
+          parse_lines(rest, next_line, [directive | acc])
         end
 
       Regex.match?(@date_regex, line) ->
-        with {:ok, directive, rest, next_line} <- parse_dated(line, rest, line_no),
-             {:ok, acc} <- parse_lines(rest, next_line, [directive | acc]) do
-          {:ok, acc}
+        with {:ok, directive, rest, next_line} <- parse_dated(line, rest, line_no) do
+          parse_lines(rest, next_line, [directive | acc])
         end
 
       true ->
@@ -123,83 +121,58 @@ defmodule Beancount.Parser.Grammar do
     opts = [line: line_no]
 
     case String.split(remainder, " ", parts: 2) do
-      ["open", rest_line] ->
-        with {:ok, open, rest, next_line} <- parse_open(date, rest_line, rest, line_no, opts) do
-          {:ok, open, rest, next_line}
-        end
-
-      ["close", account] ->
-        with {:ok, close, rest, next_line} <- parse_close(date, account, rest, line_no, opts) do
-          {:ok, close, rest, next_line}
-        end
-
       ["commodity", currency] ->
-        with {:ok, commodity, rest, next_line} <-
-               parse_simple_metadata(
-                 date,
-                 currency,
-                 rest,
-                 line_no,
-                 fn date, currency, metadata ->
-                   %Commodity{date: date, currency: currency, metadata: metadata}
-                 end,
-                 opts
-               ) do
-          {:ok, commodity, rest, next_line}
-        end
+        parse_simple_metadata(
+          date,
+          currency,
+          rest,
+          line_no,
+          fn date, currency, metadata ->
+            %Commodity{date: date, currency: currency, metadata: metadata}
+          end,
+          opts
+        )
 
-      ["balance", rest_line] ->
-        with {:ok, balance, rest, next_line} <-
-               parse_balance(date, rest_line, rest, line_no, opts) do
-          {:ok, balance, rest, next_line}
-        end
-
-      ["price", rest_line] ->
-        with {:ok, price, rest, next_line} <- parse_price(date, rest_line, rest, line_no, opts) do
-          {:ok, price, rest, next_line}
-        end
-
-      ["note", rest_line] ->
-        with {:ok, note, rest, next_line} <- parse_note(date, rest_line, rest, line_no, opts) do
-          {:ok, note, rest, next_line}
-        end
-
-      ["document", rest_line] ->
-        with {:ok, document, rest, next_line} <-
-               parse_document(date, rest_line, rest, line_no, opts) do
-          {:ok, document, rest, next_line}
-        end
-
-      ["event", rest_line] ->
-        with {:ok, event, rest, next_line} <- parse_event(date, rest_line, rest, line_no, opts) do
-          {:ok, event, rest, next_line}
-        end
-
-      ["custom", rest_line] ->
-        with {:ok, custom, rest, next_line} <- parse_custom(date, rest_line, rest, line_no, opts) do
-          {:ok, custom, rest, next_line}
-        end
-
-      ["pad", rest_line] ->
-        with {:ok, pad, rest, next_line} <- parse_pad(date, rest_line, rest, line_no, opts) do
-          {:ok, pad, rest, next_line}
-        end
-
-      ["query", rest_line] ->
-        with {:ok, query, rest, next_line} <- parse_query(date, rest_line, rest, line_no, opts) do
-          {:ok, query, rest, next_line}
-        end
-
-      [flag, rest_line] ->
-        with {:ok, txn, rest, next_line} <-
-               parse_transaction(date, flag, rest_line, rest, line_no, opts) do
-          {:ok, txn, rest, next_line}
-        end
+      [kind, arg] ->
+        parse_dated_directive(kind, arg, date, rest, line_no, opts)
 
       _ ->
         {:error, error("unknown dated directive", line_no, 1)}
     end
   end
+
+  defp parse_dated_directive("open", rest_line, date, rest, line_no, opts),
+    do: parse_open(date, rest_line, rest, line_no, opts)
+
+  defp parse_dated_directive("close", account, date, rest, line_no, opts),
+    do: parse_close(date, account, rest, line_no, opts)
+
+  defp parse_dated_directive("balance", rest_line, date, rest, line_no, opts),
+    do: parse_balance(date, rest_line, rest, line_no, opts)
+
+  defp parse_dated_directive("price", rest_line, date, rest, line_no, opts),
+    do: parse_price(date, rest_line, rest, line_no, opts)
+
+  defp parse_dated_directive("note", rest_line, date, rest, line_no, opts),
+    do: parse_note(date, rest_line, rest, line_no, opts)
+
+  defp parse_dated_directive("document", rest_line, date, rest, line_no, opts),
+    do: parse_document(date, rest_line, rest, line_no, opts)
+
+  defp parse_dated_directive("event", rest_line, date, rest, line_no, opts),
+    do: parse_event(date, rest_line, rest, line_no, opts)
+
+  defp parse_dated_directive("custom", rest_line, date, rest, line_no, opts),
+    do: parse_custom(date, rest_line, rest, line_no, opts)
+
+  defp parse_dated_directive("pad", rest_line, date, rest, line_no, opts),
+    do: parse_pad(date, rest_line, rest, line_no, opts)
+
+  defp parse_dated_directive("query", rest_line, date, rest, line_no, opts),
+    do: parse_query(date, rest_line, rest, line_no, opts)
+
+  defp parse_dated_directive(flag, rest_line, date, rest, line_no, opts),
+    do: parse_transaction(date, flag, rest_line, rest, line_no, opts)
 
   defp parse_open(date, rest_line, rest, line_no, opts) do
     case Lexer.split_tokens(rest_line) do
@@ -312,21 +285,20 @@ defmodule Beancount.Parser.Grammar do
 
     case tokens do
       [currency, amount, quote_currency | _] ->
+        {metadata_lines, rest, next_line} = collect_metadata_lines(rest, line_no)
+
         with {:ok, currency} <- parse_commodity_token(currency, opts),
              {:ok, amount} <- parse_number_token(amount, opts),
-             {:ok, quote_currency} <- parse_commodity_token(quote_currency, opts) do
-          {metadata_lines, rest, next_line} = collect_metadata_lines(rest, line_no)
-
-          with {:ok, metadata} <- parse_metadata(metadata_lines, opts) do
-            {:ok,
-             %Price{
-               date: date,
-               commodity: currency,
-               amount: amount,
-               currency: quote_currency,
-               metadata: metadata
-             }, rest, next_line}
-          end
+             {:ok, quote_currency} <- parse_commodity_token(quote_currency, opts),
+             {:ok, metadata} <- parse_metadata(metadata_lines, opts) do
+          {:ok,
+           %Price{
+             date: date,
+             commodity: currency,
+             amount: amount,
+             currency: quote_currency,
+             metadata: metadata
+           }, rest, next_line}
         end
 
       _ ->
@@ -621,7 +593,7 @@ defmodule Beancount.Parser.Grammar do
 
   defp parse_custom_value(token, opts) do
     cond do
-      String.starts_with?(token, "\"") ->
+      match?(~s(") <> _, token) ->
         parse_quoted_token(token, opts)
 
       String.starts_with?(token, "#") ->
@@ -634,19 +606,27 @@ defmodule Beancount.Parser.Grammar do
         Metadata.parse_value(token, opts)
 
       true ->
-        case Lexer.split_tokens(token) do
-          [amount, currency | _] ->
-            with {:ok, amount} <- parse_number_token(amount, opts),
-                 {:ok, currency} <- parse_commodity_token(currency, opts) do
-              {:ok, %Value.Amount{number: amount, currency: currency}}
-            end
+        parse_custom_value_token(token, opts)
+    end
+  end
 
-          _ ->
-            case Lexer.parse_account(token) do
-              {:ok, _, ""} -> {:ok, token}
-              _ -> parse_number_token(token, opts)
-            end
+  defp parse_custom_value_token(token, opts) do
+    case Lexer.split_tokens(token) do
+      [amount, currency | _] ->
+        with {:ok, amount} <- parse_number_token(amount, opts),
+             {:ok, currency} <- parse_commodity_token(currency, opts) do
+          {:ok, %Value.Amount{number: amount, currency: currency}}
         end
+
+      _ ->
+        parse_custom_account_or_number(token, opts)
+    end
+  end
+
+  defp parse_custom_account_or_number(token, opts) do
+    case Lexer.parse_account(token) do
+      {:ok, _, ""} -> {:ok, token}
+      _ -> parse_number_token(token, opts)
     end
   end
 
@@ -670,8 +650,8 @@ defmodule Beancount.Parser.Grammar do
 
   defp parse_quoted_rest(text, opts), do: parse_quoted_token(String.trim(text), opts)
 
-  defp parse_quoted_token(token, opts) do
-    if is_quoted?(token) do
+  defp parse_quoted_token(~s(") <> _rest = token, opts) do
+    if quoted_token?(token) do
       case Lexer.parse_quoted_string(token) do
         {:ok, value, ""} -> {:ok, value}
         _ -> {:error, error("invalid quoted string", opts[:line], 1)}
@@ -679,6 +659,10 @@ defmodule Beancount.Parser.Grammar do
     else
       {:error, error("expected quoted string", opts[:line], 1)}
     end
+  end
+
+  defp parse_quoted_token(_token, opts) do
+    {:error, error("expected quoted string", opts[:line], 1)}
   end
 
   defp parse_account_token(token, opts) do
@@ -702,7 +686,8 @@ defmodule Beancount.Parser.Grammar do
     end
   end
 
-  defp is_quoted?(token), do: String.starts_with?(token, "\"") and String.ends_with?(token, "\"")
+  defp quoted_token?(~s(") <> _rest = token), do: String.ends_with?(token, ~s("))
+  defp quoted_token?(_), do: false
 
   defp error(message, line, column) do
     %Error{message: message, line: line, column: column}
