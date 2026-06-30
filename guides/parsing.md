@@ -21,7 +21,7 @@ directives = Beancount.parse!(bean_text)
 ```
 
 Parse failures return `{:error, %Beancount.Parser.Error{}}` with `line`,
-`column`, `message`, and optional `token` fields — never a bare
+`column`, `message`, and optional `token` fields - never a bare
 `FunctionClauseError`.
 
 ## Grammar coverage
@@ -29,8 +29,8 @@ Parse failures return `{:error, %Beancount.Parser.Error{}}` with `line`,
 The parser covers the full Beancount surface syntax used in production ledgers:
 
 - dated directives: `open`, `close`, `commodity`, `balance`, `price`, `event`,
-  `note`, `document`, `pad`, `query`
-- undated directives: `include`, `option`, `custom`, `plugin`, `pushtag`, `poptag`
+  `note`, `document`, `pad`, `query`, `custom`
+- undated directives: `include`, `option`, `plugin`, `pushtag`, `poptag`
 - transactions with flags, payee, narration, tags, links, metadata, and postings
   (amount elision, cost specs `{…}`, and price annotations `@` / `@@`)
 - comments (`;`), metadata (`key: value`), and multi-line metadata blocks

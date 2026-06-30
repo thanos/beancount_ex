@@ -24,18 +24,33 @@ defmodule Beancount.Compare do
   @doc """
   Run `check` and canned reports through both engines on the same input.
 
-  Returns `{:ok, :equivalent}` when normalized results match, or
-  `{:error, %Diff{}}` describing the first mismatch.
+  Returns `{:ok, :equivalent}` when normalized results match,
+  `{:ok, :deferred}` when the ledger uses constructs outside the v0.3 parity
+  contract (`pad`, `include`), or `{:error, %Diff{}}` describing the first
+  mismatch.
   """
   @spec compare(module(), module(), Beancount.directive() | binary()) ::
-          {:ok, :equivalent} | {:error, Diff.t()}
+          {:ok, :equivalent | :deferred} | {:error, Diff.t()}
   def compare(oracle, native, input) when is_atom(oracle) and is_atom(native) do
     text = ledger_text(input)
 
+    if deferred_ledger?(text) do
+      {:ok, :deferred}
+    else
+      do_compare(oracle, native, text)
+    end
+  end
+
+  defp do_compare(oracle, native, text) do
     with :ok <- compare_check(oracle, native, text),
          :ok <- compare_canned_queries(oracle, native, text) do
       {:ok, :equivalent}
     end
+  end
+
+  defp deferred_ledger?(text) do
+    Regex.match?(~r/^\d{4}-\d{2}-\d{2}\s+pad\s/m, text) or
+      Regex.match?(~r/^include\s/m, text)
   end
 
   defp ledger_text(input) when is_binary(input), do: input
@@ -119,7 +134,12 @@ defmodule Beancount.Compare do
     normalize_query(left) == normalize_query(right)
   end
 
-  defp normalize_check(%Result{normalized: normalized}), do: normalized
+  defp normalize_check(%Result{normalized: normalized}) do
+    %{
+      normalized
+      | errors: Enum.map(normalized.errors, &%{&1 | line: nil})
+    }
+  end
 
   defp normalize_query(%QueryResult{columns: columns, rows: rows}) do
     %{

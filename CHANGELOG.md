@@ -31,6 +31,8 @@ Native parser, Elixir engine, and oracle comparison.
 [Unreleased]: https://github.com/beancount-ex/beancount_ex/compare/v0.3.0...HEAD
 [0.3.0]: https://github.com/beancount-ex/beancount_ex/compare/v0.2.0...v0.3.0
 
+## [0.2.0] - 2026-06-30
+
 Adds querying and reporting on top of the v0.1 directive/render/check core.
 
 ### Added

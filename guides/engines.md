@@ -72,8 +72,11 @@ Full inventory booking, balance-assertion evaluation, pad resolution, and
 arbitrary BQL are deferred to v0.4. Unsupported BQL returns
 `{:error, %Beancount.Result{}}` with a clear message.
 
-`Beancount.check_file/1` routes through the configured engine (read file →
-`check/1`).
+`Beancount.check_file/1` routes through the configured engine. The CLI engine
+passes the file path to `bean-check` (so `include` resolves relative to the
+file). With `Beancount.Engine.Elixir` configured, the file is read into text
+before `check/1` runs, so `include` directives are not resolved relative to
+the original path.
 
 ## Future engines
 

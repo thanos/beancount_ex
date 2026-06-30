@@ -3,6 +3,41 @@ defmodule Beancount.GoldenTest do
 
   alias Beancount.Golden
 
+  @compare_equivalent ~w(
+    basic_txn
+    directives
+    salary
+  )
+
+  @compare_deferred ~w(
+    account_not_opened
+    balance_assertion
+    balance_interpolation
+    balance_missing_amount_currency
+    balance_single
+    booking_add_override
+    booking_infer_price
+    booking_lifo
+    booking_lifo_short
+    booking_move_inventory
+    booking_sell_fifo
+    booking_short_cross_line
+    booking_spec_ambiguous
+    booking_spec_inferred_not_ambiguous
+    booking_spec_too_small
+    booking_stock_split
+    booking_strict
+    booking_strict_cancel_all
+    booking_strict_miss
+    booking_strict_no_cost_spec
+    double_open
+    include_not_found
+    options
+    pad
+    pad_not_plain
+    tolerance
+  )
+
   test "there is at least one golden fixture" do
     assert Golden.cases() != []
   end
@@ -67,6 +102,31 @@ defmodule Beancount.GoldenTest do
 
       assert {:ok, directives} = Beancount.parse_text(expected)
       assert Beancount.render(directives) == expected
+    end
+
+    @tag :beancount
+    test "compare/3 oracle equivalence for #{@name}" do
+      expected = Golden.expected_bean(@case_dir)
+      assert expected != nil, "missing expected.bean; run mix beancount.golden.update"
+
+      result =
+        Beancount.Compare.compare(
+          Beancount.Engine.CLI,
+          Beancount.Engine.Elixir,
+          expected
+        )
+
+      cond do
+        @name in @compare_equivalent ->
+          assert {:ok, :equivalent} = result
+
+        @name in @compare_deferred ->
+          assert match?({:ok, :deferred}, result) or
+                   match?({:error, %Beancount.Property.Diff{}}, result)
+
+        true ->
+          flunk("golden fixture #{@name} is not categorized for compare/3")
+      end
     end
   end
 end

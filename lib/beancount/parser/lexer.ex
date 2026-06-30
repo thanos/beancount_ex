@@ -46,17 +46,10 @@ defmodule Beancount.Parser.Lexer do
     |> ignore(string("\""))
     |> reduce({Enum, :join, [""]})
 
-  boolean =
-    choice([
-      string("TRUE") |> replace(true),
-      string("FALSE") |> replace(false)
-    ])
-
   defparsec(:date, date)
   defparsec(:account, account)
   defparsec(:commodity, commodity)
   defparsec(:quoted_string, quoted_string)
-  defparsec(:boolean, boolean)
 
   @doc false
   def parse_account(text) do
@@ -98,9 +91,6 @@ defmodule Beancount.Parser.Lexer do
     |> String.replace("\\\"", "\"")
     |> String.replace("\\\\", "\\")
   end
-
-  @doc false
-  def parse_boolean(text), do: unwrap(boolean(text))
 
   defp unwrap({:ok, value, rest, _, _, _}), do: {:ok, value, rest}
   defp unwrap(other), do: other

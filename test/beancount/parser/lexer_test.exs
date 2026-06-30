@@ -14,14 +14,6 @@ defmodule Beancount.Parser.LexerTest do
     assert {:error, false, "nope", 0, 1, []} = Lexer.parse_number("nope")
   end
 
-  test "parse_boolean/1 parses TRUE and FALSE" do
-    assert {:ok, value, ""} = Lexer.parse_boolean("TRUE")
-    assert value == true or value == [true]
-
-    assert {:ok, value, ""} = Lexer.parse_boolean("FALSE")
-    assert value == false or value == [false]
-  end
-
   test "split_tokens/1 preserves quoted strings" do
     assert ["2026-01-01", "open", "Assets:Bank", "USD"] =
              Lexer.split_tokens("2026-01-01 open Assets:Bank USD")

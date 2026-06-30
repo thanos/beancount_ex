@@ -2,11 +2,19 @@ defmodule Beancount.CompareTest do
   use ExUnit.Case, async: false
 
   setup do
-    unless Process.whereis(Beancount.FakeEngine) do
-      {:ok, _} = Beancount.FakeEngine.start_link()
+    case Beancount.FakeEngine.start_link() do
+      {:ok, _} -> :ok
+      {:error, {:already_started, _}} -> :ok
     end
 
-    Beancount.FakeEngine.reset!()
+    try do
+      Beancount.FakeEngine.reset!()
+    catch
+      :exit, _ ->
+        {:ok, _} = Beancount.FakeEngine.start_link()
+        Beancount.FakeEngine.reset!()
+    end
+
     :ok
   end
 
@@ -34,6 +42,19 @@ defmodule Beancount.CompareTest do
                Beancount.Engine.Elixir,
                Beancount.Engine.Elixir,
                Beancount.render(@ledger)
+             )
+  end
+
+  test "compare/3 defers ledgers with pad or include directives" do
+    assert {:ok, :deferred} =
+             Beancount.Compare.compare(
+               Beancount.Engine.Elixir,
+               Beancount.Engine.Elixir,
+               """
+               2026-01-01 open Assets:Cash USD
+               2026-01-01 open Equity:Opening
+               2026-01-02 pad Assets:Cash Equity:Opening
+               """
              )
   end
 

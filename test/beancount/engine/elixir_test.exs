@@ -101,6 +101,34 @@ defmodule Beancount.Engine.ElixirTest do
     assert Enum.any?(errors, &String.contains?(&1.message, "after close"))
   end
 
+  test "check/1 allows transactions before an account is closed" do
+    text = """
+    2026-01-01 open Assets:Bank USD
+    2026-01-01 open Equity:Opening USD
+
+    2026-01-02 * "X" "Before close"
+      Assets:Bank       1 USD
+      Equity:Opening   -1 USD
+
+    2026-01-03 close Assets:Bank
+    """
+
+    assert {:ok, %Beancount.Result{status: :ok}} = NativeEngine.check(text)
+  end
+
+  test "check/1 accepts cost-basis postings" do
+    text = """
+    2026-01-01 open Assets:Stocks AAPL
+    2026-01-01 open Assets:Cash USD
+
+    2026-01-02 * "Buy"
+      Assets:Stocks  10 AAPL {150 USD}
+      Assets:Cash  -1500 USD
+    """
+
+    assert {:ok, %Beancount.Result{status: :ok}} = NativeEngine.check(text)
+  end
+
   test "check/1 rejects accounts used before open" do
     text = """
     2026-01-31 * "Employer" "Salary"
@@ -157,7 +185,25 @@ defmodule Beancount.Engine.ElixirTest do
              NativeEngine.query(@ledger, bql)
 
     assert columns == ["date", "flag", "payee", "narration", "position", "balance"]
-    assert ["2026-01-31", "*", "Employer", "Salary", "5000 USD", ""] in rows
+    assert ["2026-01-31", "*", "Employer", "Salary", "5000 USD", "5000 USD"] in rows
+  end
+
+  test "query/2 holdings report separates units and cost" do
+    text = """
+    2026-01-01 open Assets:Stocks AAPL
+    2026-01-01 open Assets:Cash USD
+
+    2026-01-02 * "Buy"
+      Assets:Stocks  10 AAPL {150 USD}
+      Assets:Cash  -1500 USD
+    """
+
+    holdings_bql =
+      "SELECT account, units(sum(position)) AS units, cost(sum(position)) AS cost WHERE account ~ \"^Assets\" GROUP BY account ORDER BY account"
+
+    assert {:ok, %Beancount.Query.Result{rows: rows}} = NativeEngine.query(text, holdings_bql)
+
+    assert ["Assets:Stocks", "10 AAPL", "1500 USD"] in rows
   end
 
   test "query/2 returns parse and unsupported BQL errors" do

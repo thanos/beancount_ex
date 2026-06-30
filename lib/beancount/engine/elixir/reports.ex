@@ -2,6 +2,7 @@ defmodule Beancount.Engine.Elixir.Reports do
   @moduledoc false
 
   alias Beancount.Directives.Transaction
+  alias Beancount.Engine.Elixir.PostingAmount
   alias Beancount.Query.Result
   alias Beancount.Result, as: CheckResult
 
@@ -64,15 +65,14 @@ defmodule Beancount.Engine.Elixir.Reports do
   end
 
   def holdings(directives) do
-    balances = compute_balances(directives)
-
     rows =
-      balances
+      directives
+      |> compute_holdings()
       |> Enum.filter(fn {account, _} -> account_type?(account, ~w(Assets)) end)
       |> Enum.sort_by(fn {account, _} -> account end)
-      |> Enum.map(fn {account, {amount, currency}} ->
-        position = format_decimal(amount) <> " " <> currency
-        [account, position, position]
+      |> Enum.map(fn {account, holding} ->
+        {units, cost} = format_holding(holding)
+        [account, units, cost]
       end)
 
     %Result{
@@ -84,9 +84,10 @@ defmodule Beancount.Engine.Elixir.Reports do
   end
 
   def journal(directives, account) do
-    rows =
-      directives
-      |> Enum.flat_map(&journal_rows_for_directive(&1, account))
+    {rows, _balance, _currency} =
+      Enum.reduce(directives, {[], Decimal.new(0), nil}, fn directive, state ->
+        journal_rows_for_directive(directive, account, state)
+      end)
 
     %Result{
       columns: ["date", "flag", "payee", "narration", "position", "balance"],
@@ -104,23 +105,32 @@ defmodule Beancount.Engine.Elixir.Reports do
            narration: narration,
            postings: postings
          },
-         account
+         account,
+         {rows, balance, currency}
        ) do
-    postings
-    |> Enum.filter(&(&1.account == account))
-    |> Enum.map(fn posting ->
-      [
-        Date.to_iso8601(date),
-        flag || "",
-        payee || "",
-        narration || "",
-        posting_position(posting),
-        ""
-      ]
-    end)
+    {new_rows, {balance, currency}} =
+      postings
+      |> Enum.filter(&(&1.account == account))
+      |> Enum.map_reduce({balance, currency}, fn posting, {running, currency} ->
+        currency = posting.currency || currency
+        running = add_posting_amount(running, posting)
+
+        row = [
+          Date.to_iso8601(date),
+          flag || "",
+          payee || "",
+          narration || "",
+          posting_position(posting),
+          format_balance(running, currency)
+        ]
+
+        {row, {running, currency}}
+      end)
+
+    {rows ++ new_rows, balance, currency}
   end
 
-  defp journal_rows_for_directive(_directive, _account), do: []
+  defp journal_rows_for_directive(_directive, _account, state), do: state
 
   defp posting_position(%{amount: %Decimal{} = amount, currency: currency})
        when is_binary(currency) do
@@ -128,6 +138,17 @@ defmodule Beancount.Engine.Elixir.Reports do
   end
 
   defp posting_position(_posting), do: ""
+
+  defp add_posting_amount(balance, %{amount: %Decimal{} = amount}),
+    do: Decimal.add(balance, amount)
+
+  defp add_posting_amount(balance, _), do: balance
+
+  defp format_balance(%Decimal{} = balance, currency) when is_binary(currency) do
+    format_decimal(balance) <> " " <> currency
+  end
+
+  defp format_balance(%Decimal{} = balance, _), do: format_decimal(balance)
 
   defp balance_report(directives, filter, columns) do
     balances = compute_balances(directives)
@@ -146,7 +167,9 @@ defmodule Beancount.Engine.Elixir.Reports do
   defp compute_balances(directives) do
     Enum.reduce(directives, %{}, fn
       %Transaction{postings: postings}, balances ->
-        Enum.reduce(postings, balances, &add_posting_balance/2)
+        postings
+        |> PostingAmount.expand_postings()
+        |> Enum.reduce(balances, &add_posting_balance/2)
 
       _, balances ->
         balances
@@ -154,15 +177,93 @@ defmodule Beancount.Engine.Elixir.Reports do
   end
 
   defp add_posting_balance(posting, balances) do
-    case {posting.amount, posting.currency} do
-      {%Decimal{} = amount, currency} when is_binary(currency) ->
+    case PostingAmount.balance_contribution(posting) do
+      {currency, amount} ->
         Map.update(balances, posting.account, {amount, currency}, fn {existing, _} ->
           {Decimal.add(existing, amount), currency}
         end)
 
-      _ ->
+      nil ->
         balances
     end
+  end
+
+  defp compute_holdings(directives) do
+    Enum.reduce(directives, %{}, fn
+      %Transaction{postings: postings}, holdings ->
+        postings
+        |> PostingAmount.expand_postings()
+        |> Enum.reduce(holdings, &add_holding/2)
+
+      _, holdings ->
+        holdings
+    end)
+  end
+
+  defp add_holding(posting, holdings) do
+    case {posting.amount, posting.currency} do
+      {%Decimal{} = amount, currency} when is_binary(currency) ->
+        Map.update(
+          holdings,
+          posting.account,
+          holding_state(amount, currency, posting),
+          fn state ->
+            merge_holding(state, amount, currency, posting)
+          end
+        )
+
+      _ ->
+        holdings
+    end
+  end
+
+  defp holding_state(amount, currency, posting) do
+    %{
+      unit_amount: amount,
+      unit_currency: currency,
+      cost_amount: cost_amount(posting, amount),
+      cost_currency: cost_currency(posting, currency)
+    }
+  end
+
+  defp merge_holding(state, amount, currency, posting) do
+    if state.unit_currency == currency do
+      %{
+        state
+        | unit_amount: Decimal.add(state.unit_amount, amount),
+          cost_amount: add_optional(state.cost_amount, cost_amount(posting, amount))
+      }
+    else
+      holding_state(amount, currency, posting)
+    end
+  end
+
+  defp cost_amount(posting, default_amount) do
+    case PostingAmount.cost_basis(posting) do
+      {_currency, basis} -> basis
+      nil -> default_amount
+    end
+  end
+
+  defp cost_currency(posting, default_currency) do
+    case PostingAmount.cost_basis(posting) do
+      {currency, _} -> currency
+      nil -> default_currency
+    end
+  end
+
+  defp add_optional(nil, value), do: value
+  defp add_optional(existing, value), do: Decimal.add(existing, value)
+
+  defp format_holding(%{
+         unit_amount: unit_amount,
+         unit_currency: unit_currency,
+         cost_amount: cost_amount,
+         cost_currency: cost_currency
+       }) do
+    units = format_decimal(unit_amount) <> " " <> unit_currency
+    cost = format_decimal(cost_amount) <> " " <> cost_currency
+    {units, cost}
   end
 
   defp account_type?(account, roots) do

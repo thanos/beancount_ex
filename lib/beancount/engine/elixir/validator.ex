@@ -2,13 +2,13 @@ defmodule Beancount.Engine.Elixir.Validator do
   @moduledoc false
 
   alias Beancount.Directives.{Close, Open, Transaction}
+  alias Beancount.Engine.Elixir.PostingAmount
   alias Beancount.Result
 
   @spec validate([Beancount.Directive.t()]) :: {:ok, Result.t()} | {:error, Result.t()}
   def validate(directives) do
     directives
     |> Enum.reduce(initial_state(), &apply_directive/2)
-    |> validate_posting_accounts(directives)
     |> build_result()
   end
 
@@ -35,19 +35,16 @@ defmodule Beancount.Engine.Elixir.Validator do
     end
   end
 
-  defp apply_directive(%Transaction{postings: postings}, acc), do: validate_balance(acc, postings)
+  defp apply_directive(%Transaction{postings: postings}, acc) do
+    acc
+    |> validate_transaction_postings(postings)
+    |> validate_balance(postings)
+  end
+
   defp apply_directive(_directive, acc), do: acc
 
-  defp validate_posting_accounts(acc, directives) do
-    Enum.reduce(directives, acc, fn
-      %Transaction{postings: postings}, acc ->
-        Enum.reduce(postings, acc, fn posting, acc ->
-          validate_posting_account(acc, posting)
-        end)
-
-      _directive, acc ->
-        acc
-    end)
+  defp validate_transaction_postings(acc, postings) do
+    Enum.reduce(postings, acc, &validate_posting_account(&2, &1))
   end
 
   defp validate_posting_account(acc, posting) do
@@ -66,17 +63,7 @@ defmodule Beancount.Engine.Elixir.Validator do
   end
 
   defp validate_balance(acc, postings) do
-    totals =
-      Enum.reduce(postings, %{}, fn posting, totals ->
-        case posting.amount do
-          %Decimal{} = amount ->
-            currency = posting.currency || "UNKNOWN"
-            Map.update(totals, currency, amount, &Decimal.add(&1, amount))
-
-          _ ->
-            totals
-        end
-      end)
+    totals = PostingAmount.transaction_totals(postings)
 
     Enum.reduce(totals, acc, fn {_currency, total}, acc ->
       if Decimal.equal?(total, Decimal.new(0)) do

@@ -432,24 +432,42 @@ defmodule Beancount.Parser.Grammar do
   defp collect_transaction_body(rest, line_no, metadata \\ [], postings \\ []) do
     case rest do
       [line | tail] ->
-        cond do
-          line == "" or String.starts_with?(line, ";") ->
-            {Enum.reverse(metadata), Enum.reverse(postings), tail, line_no + 1}
-
-          posting_line?(line) ->
-            collect_transaction_body(tail, line_no + 1, metadata, [line | postings])
-
-          metadata_line?(line) ->
-            collect_transaction_body(tail, line_no + 1, [line | metadata], postings)
-
-          true ->
-            {Enum.reverse(metadata), Enum.reverse(postings), rest, line_no}
-        end
+        collect_transaction_line(line, tail, line_no, metadata, postings)
 
       [] ->
         {Enum.reverse(metadata), Enum.reverse(postings), [], line_no}
     end
   end
+
+  defp collect_transaction_line(line, tail, line_no, metadata, postings) do
+    cond do
+      transaction_body_end?(line) ->
+        {Enum.reverse(metadata), Enum.reverse(postings), tail, line_no + 1}
+
+      posting_line?(line) ->
+        collect_transaction_body(tail, line_no + 1, metadata, [{line, []} | postings])
+
+      metadata_line?(line) ->
+        collect_transaction_metadata(line, tail, line_no, metadata, postings)
+
+      true ->
+        {Enum.reverse(metadata), Enum.reverse(postings), [line | tail], line_no}
+    end
+  end
+
+  defp collect_transaction_metadata(line, tail, line_no, metadata, postings) do
+    case postings do
+      [{posting_line, posting_meta} | rest_postings] ->
+        collect_transaction_body(tail, line_no + 1, metadata, [
+          {posting_line, [line | posting_meta]} | rest_postings
+        ])
+
+      [] ->
+        collect_transaction_body(tail, line_no + 1, [line | metadata], postings)
+    end
+  end
+
+  defp transaction_body_end?(line), do: line == "" or String.starts_with?(line, ";")
 
   defp collect_metadata_lines(rest, line_no, metadata \\ []) do
     case rest do
@@ -492,12 +510,14 @@ defmodule Beancount.Parser.Grammar do
     end
   end
 
-  defp parse_postings(lines, opts) do
-    Enum.reduce_while(lines, {:ok, []}, fn line, {:ok, acc} ->
+  defp parse_postings(items, opts) do
+    Enum.reduce_while(items, {:ok, []}, fn {line, metadata_lines}, {:ok, acc} ->
       line_opts = Keyword.put(opts, :line, opts[:line])
 
-      case Posting.parse_line(line, line_opts) do
-        {:ok, posting} -> {:cont, {:ok, [posting | acc]}}
+      with {:ok, posting} <- Posting.parse_line(line, line_opts),
+           {:ok, metadata} <- parse_metadata(metadata_lines, opts) do
+        {:cont, {:ok, [%{posting | metadata: metadata} | acc]}}
+      else
         {:error, _} = err -> {:halt, err}
       end
     end)
@@ -528,7 +548,8 @@ defmodule Beancount.Parser.Grammar do
   end
 
   defp posting_line?(line) do
-    String.starts_with?(line, "  ") and Regex.match?(~r/^\s+[!?]?[A-Z]/, line)
+    String.starts_with?(line, "  ") and Regex.match?(~r/^\s+[!?]?[A-Z]/, line) and
+      not Regex.match?(~r/^\s+\S+\s*:\s+/, line)
   end
 
   defp parse_option(text, opts) do

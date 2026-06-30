@@ -122,7 +122,7 @@ if Code.ensure_loaded?(StreamData) do
     Delegates to `Beancount.Compare.compare/3`.
     """
     @spec compare(module(), module(), Beancount.directive() | binary()) ::
-            {:ok, :equivalent} | {:error, Beancount.Property.Diff.t()}
+            {:ok, :equivalent | :deferred} | {:error, Beancount.Property.Diff.t()}
     def compare(oracle, native, input) do
       Beancount.Compare.compare(oracle, native, input)
     end

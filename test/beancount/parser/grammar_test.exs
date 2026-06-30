@@ -156,4 +156,44 @@ defmodule Beancount.Parser.GrammarTest do
     assert [%Beancount.Directives.Transaction{payee: "Payee", narration: "Narration"}] =
              Enum.filter(directives, &match?(%Beancount.Directives.Transaction{}, &1))
   end
+
+  test "parse/1 attaches posting-level metadata" do
+    text = """
+    2026-01-01 open Assets:Bank USD
+    2026-01-01 open Equity:Opening USD
+
+    2026-01-02 * "Shop" "Purchase"
+      Assets:Bank  1 USD
+        ref: "abc"
+      Equity:Opening  -1 USD
+    """
+
+    assert {:ok, directives} = Grammar.parse(text)
+
+    [%Beancount.Directives.Transaction{postings: postings}] =
+      Enum.filter(directives, &match?(%Beancount.Directives.Transaction{}, &1))
+
+    [bank, equity] = postings
+    assert bank.metadata == %{"ref" => "abc"}
+    assert equity.metadata == %{}
+  end
+
+  test "parse/1 treats capitalised metadata keys as metadata" do
+    text = """
+    2026-01-01 open Assets:Bank USD
+    2026-01-01 open Equity:Opening USD
+
+    2026-01-02 * "Shop" "Purchase"
+      Foo: "value"
+      Assets:Bank  1 USD
+      Equity:Opening  -1 USD
+    """
+
+    assert {:ok, directives} = Grammar.parse(text)
+
+    [%Beancount.Directives.Transaction{metadata: metadata}] =
+      Enum.filter(directives, &match?(%Beancount.Directives.Transaction{}, &1))
+
+    assert metadata == %{"Foo" => "value"}
+  end
 end
