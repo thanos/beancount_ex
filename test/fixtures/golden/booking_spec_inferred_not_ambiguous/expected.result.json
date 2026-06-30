@@ -1,0 +1,21 @@
+{
+  "status": "error",
+  "errors": [
+    {
+      "line": null,
+      "message": "2020-01-04 * \"Sell\""
+    },
+    {
+      "line": null,
+      "message": "Assets:Cash"
+    },
+    {
+      "line": null,
+      "message": "Assets:Stocks  -10 AAPL {30 USD}"
+    },
+    {
+      "line": 13,
+      "message": "No position matches \"Posting(account='Assets:Stocks', units=-10 AAPL, cost=CostSpec(number_per=Decimal('30'), number_total=None, currency='USD', date=None, label=None, merge=False), price=None, flag=None, meta={'filename': '<input>', 'lineno': 14})\" against balance (10 AAPL {10 USD, 2020-01-02}, 20 AAPL {15 USD, 2020-01-03})"
+    }
+  ]
+}

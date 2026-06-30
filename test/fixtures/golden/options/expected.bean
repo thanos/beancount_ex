@@ -1,0 +1,9 @@
+option "title" "Options Example"
+
+option "operating_currency" "USD"
+
+option "inferred_tolerance_default" "0.005"
+
+option "infer_tolerance_from_cost" TRUE
+
+2026-01-01 open Assets:Bank USD

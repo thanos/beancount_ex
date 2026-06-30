@@ -1,0 +1,21 @@
+{
+  "status": "error",
+  "errors": [
+    {
+      "line": null,
+      "message": "2020-01-03 * \"Move\""
+    },
+    {
+      "line": null,
+      "message": "Assets:MoreStocks   10 AAPL {10 USD, 2020-01-02} @ 1 USD"
+    },
+    {
+      "line": null,
+      "message": "Assets:Stocks      -10 AAPL {10 USD, 2020-01-02} @ 1 USD"
+    },
+    {
+      "line": 11,
+      "message": "No position matches \"Posting(account='Assets:Stocks', units=-10 AAPL, cost=CostSpec(number_per=Decimal('10'), number_total=None, currency='USD', date=datetime.date(2020, 1, 2), label=None, merge=False), price=1 USD, flag=None, meta={'filename': '<input>', 'lineno': 12})\" against balance (10 AAPL)"
+    }
+  ]
+}

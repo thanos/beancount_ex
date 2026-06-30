@@ -62,6 +62,54 @@ defmodule Beancount.RendererTest do
       assert rendered =~ "@ 1.0 USD"
     end
 
+    test "renders inventory cost with date and FIFO open" do
+      cost = %Beancount.CostSpec{
+        per_amount: Decimal.new("10"),
+        per_currency: "USD",
+        date: ~D[2020-01-02]
+      }
+
+      ledger = [
+        Beancount.open(~D[2020-01-01], "Assets:Stocks", ["AAPL"], booking: "FIFO"),
+        Beancount.open(~D[2020-01-01], "Assets:MoreStocks", ["AAPL"], booking: "FIFO"),
+        Beancount.open(~D[2020-01-01], "Assets:Cash", ["USD"]),
+        Beancount.transaction(~D[2020-01-02], "*", nil, "Buy", [
+          Beancount.posting("Assets:Stocks", Decimal.new("10"), "AAPL",
+            price: %{amount: Decimal.new("10"), currency: "USD", type: :unit}
+          ),
+          Beancount.posting("Assets:Cash", Decimal.new("-100"), "USD")
+        ]),
+        Beancount.transaction(~D[2020-01-03], "txn", nil, "Move", [
+          Beancount.posting("Assets:Stocks", Decimal.new("-10"), "AAPL",
+            cost: cost,
+            price: %{amount: Decimal.new("1"), currency: "USD", type: :unit}
+          ),
+          Beancount.posting("Assets:MoreStocks", Decimal.new("10"), "AAPL",
+            cost: cost,
+            price: %{amount: Decimal.new("1"), currency: "USD", type: :unit}
+          )
+        ])
+      ]
+
+      rendered = Beancount.render(ledger)
+      assert rendered =~ ~s(2020-01-01 open Assets:Stocks AAPL "FIFO")
+      assert rendered =~ "{10 USD, 2020-01-02} @ 1 USD"
+    end
+
+    test "renders option and include at top of ledger" do
+      ledger = [
+        Beancount.option("title", "Test Ledger"),
+        Beancount.option("operating_currency", "USD"),
+        Beancount.include("accounts.bean"),
+        Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"])
+      ]
+
+      rendered = Beancount.render(ledger)
+      assert rendered =~ ~s(option "title" "Test Ledger")
+      assert rendered =~ ~s(option "operating_currency" "USD")
+      assert rendered =~ ~s(include "accounts.bean")
+    end
+
     test "renders posting-level metadata indented" do
       txn =
         Beancount.transaction(~D[2026-01-01], "*", nil, "X", [

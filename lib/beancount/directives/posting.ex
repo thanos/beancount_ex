@@ -7,6 +7,7 @@ defmodule Beancount.Directives.Posting do
   Beancount infers when balancing a transaction.
   """
 
+  alias Beancount.CostSpec
   alias Beancount.Renderer
 
   @enforce_keys [:account]
@@ -18,8 +19,8 @@ defmodule Beancount.Directives.Posting do
             flag: nil,
             metadata: %{}
 
-  @typedoc "A cost specification, e.g. `{10.00 USD}`."
-  @type cost :: %{amount: Decimal.t(), currency: String.t()} | nil
+  @typedoc "A cost specification. See `Beancount.CostSpec`."
+  @type cost :: CostSpec.t() | map() | nil
 
   @typedoc "A price annotation, e.g. `@ 1.2 USD` or `@@ 120 USD`."
   @type price ::

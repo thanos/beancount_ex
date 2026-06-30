@@ -4,8 +4,10 @@ defmodule Beancount.Directives.Custom do
 
       2026-01-01 custom "budget" Expenses:Food "monthly" 400.00 USD
 
-  `values` is a list of scalars (strings, `Decimal`, `Date`, booleans, or
-  atoms used as barewords) rendered in order.
+  `values` is a list of scalars rendered in order. Use `Beancount.account_value/1`,
+  `Beancount.tag_value/1`, and `Beancount.amount_value/2` for account, tag, and
+  amount values; plain strings, `Decimal`, `Date`, booleans, and atoms are also
+  supported.
   """
 
   alias Beancount.Renderer

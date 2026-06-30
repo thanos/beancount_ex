@@ -65,6 +65,7 @@ defmodule Beancount.Checker do
   @spec check_file(Path.t()) :: {:ok, Result.t()} | {:error, Result.t()}
   def check_file(path) do
     ensure_available!()
+    path = Path.expand(path)
 
     {output, exit_status} =
       System.cmd(bean_check_path(), [path], stderr_to_stdout: true)

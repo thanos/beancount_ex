@@ -12,7 +12,7 @@ defmodule Beancount.Renderer do
   individual `Beancount.Directive` implementations.
   """
 
-  alias Beancount.Directive
+  alias Beancount.{CostSpec, Directive, Value}
 
   @indent "  "
 
@@ -99,8 +99,16 @@ defmodule Beancount.Renderer do
   - `Date` becomes an ISO date
   - booleans become `TRUE`/`FALSE`
   - atoms become barewords (useful for accounts/currencies)
+  - `Beancount.Value.Account`, `Tag`, and `Amount` for custom directives
   """
   @spec format_value(term()) :: binary()
+  def format_value(%Value.Account{name: name}), do: name
+  def format_value(%Value.Tag{name: name}), do: "#" <> name
+
+  def format_value(%Value.Amount{number: %Decimal{} = number, currency: currency}) do
+    format_decimal(number) <> " " <> currency
+  end
+
   def format_value(value) when is_binary(value), do: quote_string(value)
   def format_value(%Decimal{} = value), do: format_decimal(value)
   def format_value(%Date{} = value), do: format_date(value)
@@ -164,24 +172,59 @@ defmodule Beancount.Renderer do
 
   defp posting_amount_column(postings) do
     postings
-    |> Enum.filter(&has_amount?/1)
-    |> Enum.map(fn posting ->
-      String.length(posting_prefix(posting)) + 2 + String.length(posting_number(posting))
-    end)
+    |> Enum.map(&posting_column_width/1)
     |> Enum.max(fn -> 0 end)
+  end
+
+  defp posting_column_width(posting) do
+    prefix_len = String.length(posting_prefix(posting))
+
+    cond do
+      has_amount?(posting) ->
+        prefix_len + 2 + String.length(posting_number(posting))
+
+      commodity_price?(posting) ->
+        prefix_len + 2 + String.length(posting.currency) +
+          String.length(cost_suffix(posting) <> price_suffix(posting))
+
+      true ->
+        prefix_len
+    end
   end
 
   defp render_posting_line(posting, target) do
     prefix = posting_prefix(posting)
 
-    if has_amount?(posting) do
-      number = posting_number(posting)
-      pad = max(target - String.length(prefix) - String.length(number), 2)
-      tail = " " <> posting.currency <> cost_suffix(posting) <> price_suffix(posting)
-      prefix <> String.duplicate(" ", pad) <> number <> tail
-    else
-      prefix
+    cond do
+      has_amount?(posting) ->
+        number = posting_number(posting)
+        pad = max(target - String.length(prefix) - String.length(number), 2)
+        tail = posting_amount_tail(posting)
+        prefix <> String.duplicate(" ", pad) <> number <> tail
+
+      commodity_price?(posting) ->
+        commodity = posting.currency
+        pad = max(target - String.length(prefix) - String.length(commodity), 2)
+        tail = cost_suffix(posting) <> price_suffix(posting)
+        prefix <> String.duplicate(" ", pad) <> commodity <> tail
+
+      true ->
+        prefix
     end
+  end
+
+  defp commodity_price?(%{amount: nil, currency: currency, price: %{amount: %Decimal{}}})
+       when is_binary(currency),
+       do: true
+
+  defp commodity_price?(_), do: false
+
+  defp posting_amount_tail(%{currency: currency} = posting) when is_binary(currency) do
+    " " <> currency <> cost_suffix(posting) <> price_suffix(posting)
+  end
+
+  defp posting_amount_tail(posting) do
+    cost_suffix(posting) <> price_suffix(posting)
   end
 
   defp posting_prefix(posting) do
@@ -190,15 +233,14 @@ defmodule Beancount.Renderer do
   end
 
   defp posting_number(%{amount: %Decimal{} = amount}), do: format_decimal(amount)
-  defp posting_number(_posting), do: ""
 
   defp has_amount?(%{amount: %Decimal{}}), do: true
   defp has_amount?(_posting), do: false
 
   defp cost_suffix(%{cost: nil}), do: ""
 
-  defp cost_suffix(%{cost: %{amount: %Decimal{} = amount, currency: currency}}) do
-    " {" <> format_decimal(amount) <> " " <> currency <> "}"
+  defp cost_suffix(%{cost: cost}) do
+    cost |> CostSpec.normalize() |> CostSpec.to_string() |> then(&(" " <> &1))
   end
 
   defp price_suffix(%{price: nil}), do: ""

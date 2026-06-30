@@ -1,0 +1,21 @@
+{
+  "status": "error",
+  "errors": [
+    {
+      "line": null,
+      "message": "2020-01-04 * \"Sell\""
+    },
+    {
+      "line": 13,
+      "message": "Ambiguous matches for \"-10 AAPL {\"magic lot\"}\": 10 AAPL {10 USD, 2020-01-02, \"magic lot\"}, 10 AAPL {15 USD, 2020-01-03, \"magic lot\"}"
+    },
+    {
+      "line": null,
+      "message": "Assets:Cash    300 USD"
+    },
+    {
+      "line": null,
+      "message": "Assets:Stocks  -10 AAPL {\"magic lot\"} @ 30 USD"
+    }
+  ]
+}

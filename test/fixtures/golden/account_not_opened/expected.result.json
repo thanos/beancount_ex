@@ -1,0 +1,37 @@
+{
+  "status": "error",
+  "errors": [
+    {
+      "line": null,
+      "message": "2020-01-02 * \"Buy\""
+    },
+    {
+      "line": null,
+      "message": "2020-01-02 * \"Buy\""
+    },
+    {
+      "line": null,
+      "message": "Assets:Cash    -10 EUR"
+    },
+    {
+      "line": null,
+      "message": "Assets:Cash    -10 EUR"
+    },
+    {
+      "line": null,
+      "message": "Expenses:Home   10 EUR"
+    },
+    {
+      "line": null,
+      "message": "Expenses:Home   10 EUR"
+    },
+    {
+      "line": 1,
+      "message": "Invalid reference to unknown account 'Assets:Cash'"
+    },
+    {
+      "line": 1,
+      "message": "Invalid reference to unknown account 'Expenses:Home'"
+    }
+  ]
+}

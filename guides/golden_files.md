@@ -53,3 +53,17 @@ that step is skipped. Re-running with unchanged inputs produces no diff.
 1. Create `test/fixtures/golden/<name>/input.exs`.
 2. Run `mix beancount.golden.update`.
 3. Review and commit the generated files.
+
+## Turbobean-derived cases
+
+Many fixtures under `test/fixtures/golden/` were ported from
+[turbobean/tests/golden](https://github.com/themoritz/turbobean/tree/master/tests/golden)
+as `input.exs` directive lists (booking, pad, balance assertions, etc.). The
+`pnl` case was skipped because it uses a turbobean-specific directive.
+
+To regenerate ported `input.exs` definitions from the embedded script:
+
+```bash
+mix run scripts/generate_turbobean_golden_inputs.exs
+mix beancount.golden.update
+```

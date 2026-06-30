@@ -1,0 +1,21 @@
+{
+  "status": "error",
+  "errors": [
+    {
+      "line": null,
+      "message": "2025-12-19 * \"Foo\""
+    },
+    {
+      "line": null,
+      "message": "Assets:Bar"
+    },
+    {
+      "line": null,
+      "message": "Assets:Foo  1 <class 'beancount.core.number.MISSING'> @ 1 USD"
+    },
+    {
+      "line": 6,
+      "message": "Could not resolve units currency"
+    }
+  ]
+}

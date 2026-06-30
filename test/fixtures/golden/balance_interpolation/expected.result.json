@@ -1,0 +1,29 @@
+{
+  "status": "error",
+  "errors": [
+    {
+      "line": null,
+      "message": "2025-11-21 * \"Balance\""
+    },
+    {
+      "line": null,
+      "message": "Assets:Bar      1 EUR"
+    },
+    {
+      "line": null,
+      "message": "Assets:Bar   0.01 USD"
+    },
+    {
+      "line": null,
+      "message": "Assets:Bar  -0.01 USD"
+    },
+    {
+      "line": null,
+      "message": "Assets:Foo  -0.14 USD @ 7 EUR"
+    },
+    {
+      "line": 5,
+      "message": "Transaction does not balance: (0.02 EUR)"
+    }
+  ]
+}

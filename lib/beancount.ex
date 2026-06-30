@@ -28,7 +28,7 @@ defmodule Beancount do
   that namespace directly.
   """
 
-  alias Beancount.Engine
+  alias Beancount.{Checker, CostSpec, Engine, Value}
 
   alias Beancount.Directives.{
     Balance,
@@ -37,8 +37,11 @@ defmodule Beancount do
     Custom,
     Document,
     Event,
+    Include,
     Note,
     Open,
+    Option,
+    Pad,
     Posting,
     Price,
     Transaction
@@ -144,7 +147,7 @@ defmodule Beancount do
 
   `amount` and `currency` may be `nil` for an elided amount. Options:
 
-    * `:cost` - a `%{amount: Decimal.t(), currency: String.t()}` cost basis.
+    * `:cost` - a `Beancount.CostSpec` struct or legacy `%{amount:, currency:}` map.
     * `:price` - a `%{amount: Decimal.t(), currency: String.t(), type: :unit | :total}` price.
     * `:flag` - a per-posting flag.
     * `:metadata` - a map of metadata key/values.
@@ -161,7 +164,7 @@ defmodule Beancount do
       account: account,
       amount: amount,
       currency: currency,
-      cost: Keyword.get(opts, :cost),
+      cost: opts |> Keyword.get(:cost) |> CostSpec.normalize(),
       price: Keyword.get(opts, :price),
       flag: Keyword.get(opts, :flag),
       metadata: Keyword.get(opts, :metadata, %{})
@@ -170,6 +173,11 @@ defmodule Beancount do
 
   @doc """
   Build a `balance` assertion directive.
+
+  Options:
+
+    * `:tolerance` - explicit tolerance, rendered as `AMOUNT ~ TOLERANCE CURRENCY`.
+    * `:metadata` - a map of metadata key/values.
 
   ## Examples
 
@@ -184,6 +192,7 @@ defmodule Beancount do
       account: account,
       amount: amount,
       currency: currency,
+      tolerance: Keyword.get(opts, :tolerance),
       metadata: Keyword.get(opts, :metadata, %{})
     }
   end
@@ -284,6 +293,66 @@ defmodule Beancount do
     }
   end
 
+  @doc """
+  Build a `pad` directive.
+
+  ## Examples
+
+      iex> Beancount.pad(~D[2025-12-20], "Assets:Cash", "Equity:Opening").account
+      "Assets:Cash"
+
+  """
+  @spec pad(Date.t(), String.t(), String.t(), keyword()) :: Pad.t()
+  def pad(date, account, source_account, opts \\ []) do
+    %Pad{
+      date: date,
+      account: account,
+      source_account: source_account,
+      metadata: Keyword.get(opts, :metadata, %{})
+    }
+  end
+
+  @doc """
+  Build an `include` directive.
+
+  ## Examples
+
+      iex> Beancount.include("accounts.bean").path
+      "accounts.bean"
+
+  """
+  @spec include(String.t()) :: Include.t()
+  def include(path) when is_binary(path), do: %Include{path: path}
+
+  @doc """
+  Build an `option` directive.
+
+  Common keys: `title`, `operating_currency`, `inferred_tolerance_default`,
+  `inferred_tolerance_multiplier`, `infer_tolerance_from_cost`, `tolerance_multiplier`.
+
+  ## Examples
+
+      iex> Beancount.option("title", "My Ledger").name
+      "title"
+
+  """
+  @spec option(String.t(), term()) :: Option.t()
+  def option(name, value) when is_binary(name), do: %Option{name: name, value: value}
+
+  @doc "Wrap an account name for use in `custom/4` values."
+  @spec account_value(String.t()) :: Value.Account.t()
+  def account_value(name) when is_binary(name), do: %Value.Account{name: name}
+
+  @doc "Wrap a tag name for use in `custom/4` values (rendered as `#tag`)."
+  @spec tag_value(String.t()) :: Value.Tag.t()
+  def tag_value(name) when is_binary(name), do: %Value.Tag{name: name}
+
+  @doc "Wrap a commodity amount for use in `custom/4` values."
+  @spec amount_value(Decimal.t(), String.t()) :: Value.Amount.t()
+  def amount_value(%Decimal{} = number, currency) when is_binary(currency) do
+    %Value.Amount{number: number, currency: currency}
+  end
+
   # ── Engine dispatch ───────────────────────────────────────────────────────
 
   @doc """
@@ -325,7 +394,7 @@ defmodule Beancount do
   """
   @spec check_file(Path.t()) :: {:ok, Beancount.Result.t()} | {:error, Beancount.Result.t()}
   def check_file(path) do
-    path |> File.read!() |> check_text()
+    Checker.check_file(path)
   end
 
   @typedoc "A successful BQL query result or a failure result."

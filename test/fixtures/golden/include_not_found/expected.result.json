@@ -1,0 +1,9 @@
+{
+  "status": "error",
+  "errors": [
+    {
+      "line": 0,
+      "message": "File glob \"nonexistent.bean\" does not match any files"
+    }
+  ]
+}

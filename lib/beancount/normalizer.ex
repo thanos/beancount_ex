@@ -44,6 +44,7 @@ defmodule Beancount.Normalizer do
     errors =
       [stdout, stderr]
       |> Enum.flat_map(&parse_lines(&1, source_path))
+      |> Enum.sort_by(&{&1.message, &1.line || 0})
 
     %{status: status, errors: errors}
   end

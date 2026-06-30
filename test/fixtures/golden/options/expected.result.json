@@ -1,0 +1,13 @@
+{
+  "status": "error",
+  "errors": [
+    {
+      "line": 5,
+      "message": "Error for option 'inferred_tolerance_default': Invalid value '0.005'"
+    },
+    {
+      "line": 7,
+      "message": "syntax error, unexpected BOOL, expecting STRING"
+    }
+  ]
+}
