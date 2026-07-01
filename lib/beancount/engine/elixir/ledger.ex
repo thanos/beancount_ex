@@ -15,6 +15,7 @@ defmodule Beancount.Engine.Elixir.Ledger do
 
   alias Beancount.Engine.Elixir.{
     BalanceCheck,
+    DirectiveSort,
     Inventory,
     Options,
     PadResolver,
@@ -45,8 +46,9 @@ defmodule Beancount.Engine.Elixir.Ledger do
   @spec process(t(), [Beancount.Directive.t()]) :: t()
   def process(%__MODULE__{} = ledger, directives) do
     ledger = index_accounts(ledger, directives)
+    ordered = DirectiveSort.order(directives)
 
-    Enum.reduce(Enum.with_index(directives), ledger, fn {directive, _index}, ledger ->
+    Enum.reduce(ordered, ledger, fn directive, ledger ->
       apply_directive(directive, ledger)
     end)
   end

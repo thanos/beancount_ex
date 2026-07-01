@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Native `Ledger` now processes dated directives in Beancount date order
+  (`entry_sortkey`) instead of source-file order, closing the `balance_failed`
+  gap on vendored `example.beancount`.
+- `Compare` normalizes position cells by merging lots at the same cost and
+  trimming zero balances when comparing query output.
+
+## [0.5.0] - 2026-06-30
+
+Native BQL parser, directive compiler, and Datalog-style query evaluation.
+
+### Added
+
+- `Beancount.BQL` - parse and evaluate Beancount Query Language strings.
+- Directive compiler: `FactBase`, `Index` (ETS), `CompiledLedger`, `QueryEngine`.
+- Guides: `query_engine.md`, `directive_compiler.md`.
+- BQL parity tests (tagged `:beancount`) and `bench/compiler_bench.exs`.
+- Coveralls.io integration in CI.
+
+### Changed
+
+- `Engine.Elixir.query/2` evaluates arbitrary supported BQL natively (replaces
+  hardcoded canned-query map).
+- Reconciliation test documents known `balance_failed` gap on `example.beancount`
+  instead of a skipped equivalence test.
+
+[Unreleased]: https://github.com/beancount-ex/beancount_ex/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/beancount-ex/beancount_ex/compare/v0.4.0...v0.5.0
+
 ## [0.4.0] - 2026-06-30
 
 Full native booking parity, reconciliation harness, and performance benchmarks.
@@ -33,7 +63,6 @@ Full native booking parity, reconciliation harness, and performance benchmarks.
 - `compare/3` skips canned queries when both engines agree on equivalent check
   errors; no more `:deferred` return value.
 
-[Unreleased]: https://github.com/beancount-ex/beancount_ex/compare/v0.4.0...HEAD
 [0.4.0]: https://github.com/beancount-ex/beancount_ex/compare/v0.3.0...v0.4.0
 
 ## [0.3.0] - 2026-06-30

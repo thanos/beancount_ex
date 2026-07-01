@@ -1,7 +1,7 @@
 defmodule Beancount.MixProject do
   use Mix.Project
 
-  @version "0.4.0"
+  @version "0.5.0"
   @source_url "https://github.com/beancount-ex/beancount_ex"
 
   def project do
@@ -97,6 +97,8 @@ defmodule Beancount.MixProject do
         "guides/golden_files.md",
         "guides/booking.md",
         "guides/reconciliation.md",
+        "guides/query_engine.md",
+        "guides/directive_compiler.md",
         "guides/performance.md",
         "guides/property_testing.md",
         "guides/oracle_strategy.md",
@@ -118,6 +120,8 @@ defmodule Beancount.MixProject do
           Beancount.Engine,
           Beancount.Engine.CLI,
           Beancount.Engine.Elixir,
+          Beancount.Engine.Elixir.CompiledLedger,
+          Beancount.BQL,
           Beancount.Checker,
           Beancount.Query
         ],

@@ -42,7 +42,7 @@ system. By wrapping it behind a stable Elixir API, `beancount_ex`:
                                         │
                         ┌───────────────┴───────────────┐
                         ▼                               ▼
-              Engine.CLI (default)            Engine.Elixir (v0.4, opt-in)
+              Engine.CLI (default)            Engine.Elixir (v0.5, opt-in)
 ```
 
 ## Installation
@@ -50,7 +50,7 @@ system. By wrapping it behind a stable Elixir API, `beancount_ex`:
 ```elixir
 def deps do
   [
-    {:beancount_ex, "~> 0.4"},
+    {:beancount_ex, "~> 0.5"},
     # optional: Explorer DataFrames for report tables (see guides/accounting/running_reports.md)
     {:explorer, "~> 0.11"}
   ]
@@ -147,8 +147,8 @@ For programmers and LLMs building accounting features:
 
 - [Library guides index](guides/library.md)
 - [Parsing](guides/parsing.md), [Rendering](guides/rendering.md), [Engines](guides/engines.md)
-- [Querying](guides/querying.md), [Reporting](guides/reporting.md), [Booking](guides/booking.md)
-- [Golden files](guides/golden_files.md), [Property testing](guides/property_testing.md), [Oracle strategy](guides/oracle_strategy.md)
+- [Querying](guides/querying.md), [Query engine](guides/query_engine.md), [Reporting](guides/reporting.md), [Booking](guides/booking.md)
+- [Directive compiler](guides/directive_compiler.md), [Golden files](guides/golden_files.md), [Property testing](guides/property_testing.md), [Oracle strategy](guides/oracle_strategy.md)
 
 ## License
 

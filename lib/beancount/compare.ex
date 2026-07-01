@@ -198,19 +198,96 @@ defmodule Beancount.Compare do
     cell
     |> String.split(",")
     |> Enum.map(&String.trim/1)
-    |> Enum.reject(&(&1 == ""))
+    |> Enum.reject(&(&1 == "" or zero_position?(&1)))
     |> Enum.map(&normalize_decimal_string/1)
+    |> merge_position_lots()
     |> Enum.sort()
     |> Enum.join(", ")
   end
 
-  defp normalize_decimal_string(cell) do
-    case Regex.run(~r/^(-?\d+(?:\.\d+)?)\s+(.+)$/, cell) do
+  defp zero_position?(segment) do
+    case Regex.run(~r/^(-?\d+(?:\.\d+)?)\s+(\S+)/, segment) do
+      [_, number, _commodity] -> Decimal.equal?(Decimal.new(number), 0)
+      _ -> false
+    end
+  end
+
+  defp merge_position_lots(segments) do
+    merged =
+      Enum.reduce(segments, %{}, fn segment, acc ->
+        merge_position_segment(acc, segment)
+      end)
+
+    Enum.map(merged, &format_merged_position/1)
+  end
+
+  defp merge_position_segment(acc, segment) do
+    case Regex.run(~r/^(-?\d+(?:\.\d+)?)\s+(\S+)(?:\s+(\{.+?\}))?$/, segment) do
+      [_, number, commodity, cost] ->
+        key = {commodity, normalize_cost_suffix(cost)}
+
+        Map.update(acc, key, Decimal.new(number), fn existing ->
+          Decimal.add(existing, Decimal.new(number))
+        end)
+
+      _ ->
+        Map.put(acc, {segment, :unique}, Decimal.new(1))
+    end
+  end
+
+  defp format_merged_position({{commodity, ""}, units}),
+    do: format_position_units(units, commodity, nil)
+
+  defp format_merged_position({{commodity, cost}, units}) when is_binary(cost),
+    do: format_position_units(units, commodity, cost)
+
+  defp format_merged_position({{segment, :unique}, _}), do: segment
+
+  defp format_position_units(units, commodity, cost) do
+    base =
+      units
+      |> Decimal.normalize()
+      |> Decimal.to_string(:normal)
+      |> Kernel.<>(" ")
+      |> Kernel.<>(commodity)
+
+    case normalize_cost_suffix(cost) do
+      "" -> base
+      normalized_cost -> base <> " " <> normalized_cost
+    end
+  end
+
+  defp normalize_cost_suffix(nil), do: ""
+  defp normalize_cost_suffix(""), do: ""
+
+  defp normalize_cost_suffix("{" <> rest) do
+    inner = rest |> String.trim_trailing("}") |> String.trim()
+
+    case Regex.run(~r/^(-?\d+(?:\.\d+)?)\s+(.+)$/, inner) do
       [_, number, currency] ->
         normalized =
           number |> Decimal.new() |> Decimal.normalize() |> Decimal.to_string(:normal)
 
-        normalized <> " " <> currency
+        "{ #{normalized} #{currency}}"
+
+      _ ->
+        "{ #{inner}}"
+    end
+  end
+
+  defp normalize_cost_suffix(cost) when is_binary(cost), do: String.trim(cost)
+
+  defp normalize_decimal_string(cell) do
+    case Regex.run(~r/^(-?\d+(?:\.\d+)?)\s+(\S+)(?:\s+(\{.+?\}))?$/, cell) do
+      [_, number, commodity, cost] ->
+        normalized =
+          number |> Decimal.new() |> Decimal.normalize() |> Decimal.to_string(:normal)
+
+        if is_binary(cost) and cost != "" do
+          normalized <> " " <> commodity <> " " <> normalize_cost_suffix(cost)
+        else
+          normalized <> " " <> commodity
+        end
 
       _ ->
         cell

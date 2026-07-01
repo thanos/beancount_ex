@@ -7,10 +7,8 @@
 
 1. **bean-check** — the fixture is valid Beancount.
 2. **parse → render → bean-query** — round-trip reports match the original.
-3. **compare/3** (tagged `:reconciliation_compare`, currently skipped): full
-   native engine equivalence on the 7,175-line ledger. A non-skipped test
-   asserts `compare/3` returns `{:ok, :equivalent}` or a structured
-   `Beancount.Property.Diff` without crashing.
+3. **check/3** — native engine passes `bean-check` on the full ledger, including
+   all balance assertions (date-ordered processing).
 
 Golden fixtures (30/30) gate booking parity; the example ledger is the capstone
 for real-world scale.

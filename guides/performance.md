@@ -5,8 +5,11 @@ Run benchmarks locally (not part of CI):
 ```bash
 mix run bench/parser_bench.exs
 mix run bench/engine_bench.exs
+mix run bench/compiler_bench.exs
 ```
 
-`Engine.Elixir` is suitable for structural validation and canned reports without
-shelling out to `bean-check` / `bean-query`. For arbitrary BQL or plugin-heavy
-ledgers, prefer `Engine.CLI` until native coverage expands.
+`Engine.Elixir` compiles directives once via `CompiledLedger` and evaluates BQL
+natively. For ledgers over 1,000 directives, postings are indexed in ETS.
+
+Use `Engine.CLI` when you need full `bean-query` coverage beyond the native BQL
+subset documented in `guides/query_engine.md`.

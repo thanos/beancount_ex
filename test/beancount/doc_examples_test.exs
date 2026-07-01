@@ -1,3 +1,8 @@
+defmodule Beancount.BQLDocTest do
+  use ExUnit.Case, async: true
+  doctest Beancount.BQL
+end
+
 defmodule Beancount.ParserDocTest do
   use ExUnit.Case, async: true
   doctest Beancount.Parser

@@ -25,7 +25,8 @@ can be validated against Beancount's observable behavior.
 v0.1  Beancount  ->  Engine.CLI     ->  Real Beancount      (default)
 v0.3  Beancount  ->  Engine.Elixir  ->  Parser + structural check/query
 v0.4  Beancount  ->  Engine.Elixir  ->  Full booking parity (golden fixtures)
-v0.5  Beancount  ->  Engine.Rust    ->  Native, fast        (future)
+v0.5  Beancount  ->  Engine.Elixir  ->  Native BQL + directive compiler
+v0.6  Beancount  ->  Engine.Rust    ->  Native, fast        (future)
 ```
 
 At every step the public `Beancount.*` API stays identical. Applications built
