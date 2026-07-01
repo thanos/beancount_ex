@@ -94,7 +94,8 @@ defmodule Beancount.MixProject do
       ],
       groups_for_extras: [
         Accounting: ~r/guides\/(accounting\/|getting_started\.md)/,
-        Library: ~r/guides\/(parsing|rendering|engines|querying|reporting|golden_files|booking|reconciliation|performance|property_testing|oracle_strategy|library)\./,
+        Library:
+          ~r/guides\/(parsing|rendering|engines|querying|reporting|golden_files|booking|reconciliation|performance|property_testing|oracle_strategy|library)\./,
         Livebooks: ~r/guides\/livebook\//
       ],
       groups_for_modules: [
