@@ -58,7 +58,42 @@ jobs:
         run: mix credo --strict
 
       - name: Tests (unit + property + golden)
-        run: mix test --cover
+        run: mix test
+
+  coverage:
+    name: Coverage (Coveralls)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    env:
+      MIX_ENV: test
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.18"
+          otp-version: "28"
+
+      - name: Cache deps and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-coveralls-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-coveralls-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Upload coverage to Coveralls
+        run: mix coveralls.github
 
   dialyzer:
     name: Dialyzer

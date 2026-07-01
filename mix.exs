@@ -15,13 +15,25 @@ defmodule Beancount.MixProject do
       deps: deps(),
       aliases: aliases(),
       test_ignore_filters: [&String.contains?(&1, "/fixtures/")],
-      test_coverage: [summary: [threshold: 80]],
+      test_coverage: [tool: ExCoveralls, summary: [threshold: 80]],
       dialyzer: dialyzer(),
       name: "beancount_ex",
       description: description(),
       package: package(),
       docs: docs(),
       source_url: @source_url
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test,
+        "coveralls.github": :test
+      ]
     ]
   end
 
@@ -44,6 +56,7 @@ defmodule Beancount.MixProject do
       {:stream_data, "~> 1.0", only: [:test, :dev]},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
+      {:excoveralls, "~> 0.18", only: :test},
       {:ex_doc, "~> 0.34", only: :dev, runtime: false}
     ]
   end
