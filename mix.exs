@@ -1,7 +1,7 @@
 defmodule Beancount.MixProject do
   use Mix.Project
 
-  @version "0.3.0"
+  @version "0.4.0"
   @source_url "https://github.com/beancount-ex/beancount_ex"
 
   def project do
@@ -77,6 +77,9 @@ defmodule Beancount.MixProject do
         "guides/querying.md",
         "guides/reporting.md",
         "guides/golden_files.md",
+        "guides/booking.md",
+        "guides/reconciliation.md",
+        "guides/performance.md",
         "guides/property_testing.md",
         "guides/oracle_strategy.md",
         "guides/livebook/getting_started.livemd",

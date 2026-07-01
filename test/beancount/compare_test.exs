@@ -45,8 +45,8 @@ defmodule Beancount.CompareTest do
              )
   end
 
-  test "compare/3 defers ledgers with pad or include directives" do
-    assert {:ok, :deferred} =
+  test "compare/3 reports equivalent engines for pad ledgers" do
+    assert {:ok, :equivalent} =
              Beancount.Compare.compare(
                Beancount.Engine.Elixir,
                Beancount.Engine.Elixir,
@@ -54,6 +54,7 @@ defmodule Beancount.CompareTest do
                2026-01-01 open Assets:Cash USD
                2026-01-01 open Equity:Opening
                2026-01-02 pad Assets:Cash Equity:Opening
+               2026-01-03 balance Assets:Cash  5 USD
                """
              )
   end

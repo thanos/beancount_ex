@@ -51,6 +51,9 @@ defmodule Beancount.Parser.Grammar do
       line == "" or String.starts_with?(line, ";") ->
         parse_lines(rest, line_no + 1, acc)
 
+      org_header?(line) ->
+        parse_lines(rest, line_no + 1, acc)
+
       undated_directive?(line) ->
         with {:ok, directive, rest, next_line} <- parse_undated(line, rest, line_no) do
           parse_lines(rest, next_line, [directive | acc])
@@ -65,6 +68,8 @@ defmodule Beancount.Parser.Grammar do
         {:error, error("expected directive", line_no, 1)}
     end
   end
+
+  defp org_header?(line), do: Regex.match?(~r/^\*+\s/, line)
 
   defp undated_directive?(line) do
     String.starts_with?(line, "include ") or
@@ -199,8 +204,14 @@ defmodule Beancount.Parser.Grammar do
 
   defp parse_open_tail([], _opts), do: {:ok, [], nil}
 
-  defp parse_open_tail([currencies], _opts) do
-    {:ok, String.split(currencies, ",", trim: true), nil}
+  defp parse_open_tail([token], opts) do
+    if quoted_token?(token) do
+      with {:ok, booking} <- parse_quoted_token(token, opts) do
+        {:ok, [], booking}
+      end
+    else
+      {:ok, String.split(token, ",", trim: true), nil}
+    end
   end
 
   defp parse_open_tail([currencies, booking], opts) do
@@ -394,18 +405,45 @@ defmodule Beancount.Parser.Grammar do
 
   defp parse_query(date, rest_line, rest, line_no, opts) do
     case Lexer.split_tokens(rest_line) do
-      [name | bql_tokens] ->
-        {metadata_lines, rest, next_line} = collect_metadata_lines(rest, line_no)
-
+      [name | bql_tokens] when bql_tokens != [] ->
         with {:ok, name} <- parse_quoted_token(name, opts),
-             {:ok, bql} <- parse_quoted_token(Enum.join(bql_tokens, " "), opts),
-             {:ok, metadata} <- parse_metadata(metadata_lines, opts) do
-          {:ok, %Query{date: date, name: name, bql: bql, metadata: metadata}, rest, next_line}
+             {:ok, bql, rest, next_line} <- parse_query_bql(bql_tokens, rest, line_no, opts) do
+          {:ok, %Query{date: date, name: name, bql: bql, metadata: %{}}, rest, next_line}
         end
 
       _ ->
         {:error, error("invalid query directive", line_no, 1)}
     end
+  end
+
+  defp parse_query_bql(["\""], rest, line_no, _opts) do
+    collect_multiline_quoted(rest, line_no, [])
+  end
+
+  defp parse_query_bql(tokens, rest, line_no, opts) do
+    with {:ok, bql} <- parse_quoted_token(Enum.join(tokens, " "), opts) do
+      {:ok, bql, rest, line_no}
+    end
+  end
+
+  defp collect_multiline_quoted([line | rest], line_no, acc) do
+    trimmed = String.trim_trailing(line)
+
+    cond do
+      trimmed == "\"" ->
+        {:ok, Enum.join(acc, "\n"), rest, line_no + 1}
+
+      String.ends_with?(trimmed, "\"") ->
+        content = String.slice(trimmed, 0, String.length(trimmed) - 1)
+        {:ok, Enum.join(acc ++ [content], "\n"), rest, line_no + 1}
+
+      true ->
+        collect_multiline_quoted(rest, line_no + 1, acc ++ [line])
+    end
+  end
+
+  defp collect_multiline_quoted([], _line_no, _acc) do
+    {:error, error("unterminated query string", 0, 1)}
   end
 
   defp parse_transaction(date, flag, rest_line, rest, line_no, opts) do

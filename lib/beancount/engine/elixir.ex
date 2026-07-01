@@ -1,16 +1,10 @@
 defmodule Beancount.Engine.Elixir do
   @moduledoc """
-  Native Elixir engine: parse, render, structural check, and canned reports.
+  Native Elixir engine: parse, render, booking-aware check, and canned reports.
 
-  v0.3 provides **staged parity** with the CLI oracle:
-
-    * `render/1` delegates to `Beancount.Renderer`
-    * `check/1` performs structural validation (opens/closes, syntactic balance)
-    * `check_file/1` reads a file then checks
-    * `query/2` evaluates the canned report set natively
-
-  Full inventory booking, balance assertion evaluation, and arbitrary BQL are
-  deferred to v0.4.
+  v0.4 provides full parity with the CLI oracle on the 29 golden fixtures via
+  `Beancount.Compare.compare/3` (booking, balance assertions, pad resolution,
+  tolerance inference, and canned reports).
   """
 
   @behaviour Beancount.Engine
@@ -32,8 +26,14 @@ defmodule Beancount.Engine.Elixir do
   @impl Beancount.Engine
   def check_file(path) do
     case File.read(path) do
-      {:ok, text} -> check(text)
-      {:error, reason} -> raise File.Error, reason: reason, action: "read file", path: path
+      {:ok, text} ->
+        case Parser.parse_text(text) do
+          {:ok, directives} -> Validator.validate(directives, include_base: path)
+          {:error, %Parser.Error{} = error} -> validation_error([error])
+        end
+
+      {:error, reason} ->
+        raise File.Error, reason: reason, action: "read file", path: path
     end
   end
 

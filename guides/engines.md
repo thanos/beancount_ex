@@ -54,23 +54,25 @@ possible.
 Because `query/2` is part of the behaviour, native engines must implement it
 too - keeping the oracle contract uniform across backends.
 
-## The Elixir engine (v0.3, opt-in)
+## The Elixir engine (v0.4)
 
-`Beancount.Engine.Elixir` is a native engine with **staged parity**:
+`Beancount.Engine.Elixir` is a native engine with **full golden parity** against
+the CLI oracle for check + canned reports:
 
 ```elixir
 config :beancount_ex, engine: Beancount.Engine.Elixir
 ```
 
-| Callback | v0.3 behaviour |
+| Callback | v0.4 behaviour |
 |----------|----------------|
 | `render/1` | delegates to `Beancount.Renderer` |
-| `check/1` | parses text, then structural validation (opens/closes, syntactic per-currency balance) |
-| `query/2` | canned reports only (`balances`, `balance_sheet`, `income_statement`, `holdings`, `journal`) |
+| `check/1` | booking, balance assertions, pad resolution, tolerance inference |
+| `query/2` | canned reports (`balances`, `balance_sheet`, `income_statement`, `holdings`, `journal`) |
 
-Full inventory booking, balance-assertion evaluation, pad resolution, and
-arbitrary BQL are deferred to v0.4. Unsupported BQL returns
-`{:error, %Beancount.Result{}}` with a clear message.
+Arbitrary BQL and Beancount plugins are not implemented natively. Unsupported
+BQL returns `{:error, %Beancount.Result{}}` with a clear message.
+
+See `guides/booking.md` and `guides/reconciliation.md`.
 
 `Beancount.check_file/1` routes through the configured engine. The CLI engine
 passes the file path to `bean-check` (so `include` resolves relative to the
