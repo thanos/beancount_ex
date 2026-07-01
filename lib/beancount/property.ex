@@ -22,7 +22,16 @@ if Code.ensure_loaded?(StreamData) do
     @leaves ~w(Bank Cash Savings Checking Salary Food Rent Fees Misc Travel)
     @currencies ~w(USD EUR GBP CAD CHF JPY)
 
-    @doc "Generate a valid account name such as `Assets:Bank`."
+    @doc """
+    Generate a valid account name such as `Assets:Bank`.
+
+    ## Examples
+
+        data = Beancount.Property.account() |> Enum.take(1) |> hd()
+        String.match?(data, ~r/^(Assets|Liabilities|Equity|Income|Expenses):/)
+        # => {:ok, _}
+
+    """
     @spec account() :: StreamData.t(String.t())
     def account do
       bind(member_of(@roots), fn root ->
@@ -30,21 +39,57 @@ if Code.ensure_loaded?(StreamData) do
       end)
     end
 
-    @doc "Generate a commodity/currency code."
+    @doc """
+    Generate a commodity/currency code.
+
+    ## Examples
+
+        iex> data = Beancount.Property.currency() |> Enum.take(1) |> hd()
+        iex> data in ~w(USD EUR GBP CAD CHF JPY)
+        true
+
+    """
     @spec currency() :: StreamData.t(String.t())
     def currency, do: member_of(@currencies)
 
-    @doc "Generate a `Date` within a bounded range for determinism."
+    @doc """
+    Generate a `Date` within a bounded range for determinism.
+
+    ## Examples
+
+        iex> date = Beancount.Property.date() |> Enum.take(1) |> hd()
+        iex> %Date{} = date
+        date
+
+    """
     @spec date() :: StreamData.t(Date.t())
     def date do
       map(integer(0..3650), fn offset -> Date.add(~D[2020-01-01], offset) end)
     end
 
-    @doc "Generate a positive integer `Decimal` amount."
+    @doc """
+    Generate a positive integer `Decimal` amount.
+
+    ## Examples
+
+        iex> amount = Beancount.Property.amount() |> Enum.take(1) |> hd()
+        iex> %Decimal{} = amount
+        amount
+
+    """
     @spec amount() :: StreamData.t(Decimal.t())
     def amount, do: map(integer(1..1_000_000), &Decimal.new/1)
 
-    @doc "Generate a small metadata map with string values."
+    @doc """
+    Generate a small metadata map with string values.
+
+    ## Examples
+
+        iex> map = Beancount.Property.metadata() |> Enum.take(1) |> hd()
+        iex> is_map(map)
+        true
+
+    """
     @spec metadata() :: StreamData.t(map())
     def metadata do
       keys = member_of(~w(note ref category source import id type memo tag)a)
@@ -58,6 +103,13 @@ if Code.ensure_loaded?(StreamData) do
 
     The generated postings always sum to zero in a single currency, so the
     transaction is guaranteed to balance.
+
+    ## Examples
+
+        iex> txn = Beancount.Property.balanced_transaction() |> Enum.take(1) |> hd()
+        iex> %Beancount.Directives.Transaction{} = txn
+        txn
+
     """
     @spec balanced_transaction() :: StreamData.t(Beancount.Directives.Transaction.t())
     def balanced_transaction do
@@ -104,6 +156,13 @@ if Code.ensure_loaded?(StreamData) do
     @doc """
     Generate a complete, valid ledger: `open` directives for every account
     used, followed by a balanced transaction.
+
+    ## Examples
+
+        iex> ledger = Beancount.Property.ledger() |> Enum.take(1) |> hd()
+        iex> is_list(ledger)
+        true
+
     """
     @spec ledger() :: StreamData.t([Beancount.Directive.t()])
     def ledger do
@@ -120,9 +179,24 @@ if Code.ensure_loaded?(StreamData) do
     Compare two engines on identical input within the v0.3 parity contract.
 
     Delegates to `Beancount.Compare.compare/3`.
+
+    ## Examples
+
+        iex> ledger = [
+        ...>   Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"]),
+        ...>   Beancount.open(~D[2026-01-01], "Income:Salary", ["USD"]),
+        ...>   Beancount.open(~D[2026-01-01], "Equity:Opening", ["USD"]),
+        ...>   Beancount.transaction(~D[2026-01-31], "*", nil, "Salary", [
+        ...>     Beancount.posting("Assets:Bank", Decimal.new("100"), "USD"),
+        ...>     Beancount.posting("Income:Salary", Decimal.new("-100"), "USD")
+        ...>   ])
+        ...> ]
+        iex> Beancount.Property.compare(Beancount.Engine.Elixir, Beancount.Engine.Elixir, ledger)
+        {:ok, :equivalent}
+
     """
     @spec compare(module(), module(), Beancount.directive() | binary()) ::
-            {:ok, :equivalent | :deferred} | {:error, Beancount.Property.Diff.t()}
+            {:ok, :equivalent} | {:error, Beancount.Property.Diff.t()}
     def compare(oracle, native, input) do
       Beancount.Compare.compare(oracle, native, input)
     end

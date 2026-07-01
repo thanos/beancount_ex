@@ -2,7 +2,10 @@ defmodule Beancount.CostSpec do
   @moduledoc """
   Beancount cost/lot specification for inventory postings.
 
-  Supports the full cost grammar used in Beancount postings:
+  Used by `Beancount.Directives.Posting` when commodities are held at cost.
+  See [Costs and Prices](https://beancount.github.io/docs/beancount_language_syntax/#costs-and-prices).
+
+  ## Beancount syntax
 
       {10 USD}                 per-unit cost
       {{100 USD}}              total cost
@@ -13,8 +16,32 @@ defmodule Beancount.CostSpec do
       {2020-01-01}             date only (lot override)
       {"magic lot"}            label only (lot selection)
 
-  A legacy map `%{amount: decimal, currency: "USD"}` is accepted by
-  `Beancount.posting/4` and normalized to this struct.
+  ## Elixir struct
+
+      %Beancount.CostSpec{
+        per_amount: Decimal.new("10"),
+        per_currency: "USD",
+        total_amount: nil,
+        total_currency: nil,
+        date: ~D[2020-01-02],
+        label: "lot-a",
+        merge: false
+      }
+
+  Legacy shorthand accepted by `Beancount.posting/4`:
+
+      %{amount: Decimal.new("10"), currency: "USD"}
+
+  ## Fields
+
+    * `per_amount` - per-unit cost as `Decimal.t()`, or `nil` for total-only /
+      date-only / label-only specs.
+    * `per_currency` - currency for `per_amount`.
+    * `total_amount` - total cost for all units (`{{...}}` or `{N # total}`).
+    * `total_currency` - currency for `total_amount`.
+    * `date` - acquisition `Date.t()` for lot matching (`{10 USD, 2020-01-02}`).
+    * `label` - lot label string (`{"magic lot"}` or `{10 USD, "lot-a"}`).
+    * `merge` - when `true`, render `merge` to combine matching lots on deposit.
   """
 
   alias Beancount.Renderer
@@ -42,6 +69,15 @@ defmodule Beancount.CostSpec do
 
   @doc """
   Normalize a cost spec from a struct, legacy map, or `nil`.
+
+  ## Examples
+
+      iex> Beancount.CostSpec.normalize(%{amount: Decimal.new("10"), currency: "USD"})
+      %Beancount.CostSpec{per_amount: Decimal.new("10"), per_currency: "USD", merge: false}
+
+      iex> Beancount.CostSpec.normalize(nil)
+      nil
+
   """
   @spec normalize(t() | map() | nil) :: t() | nil
   def normalize(nil), do: nil
@@ -54,6 +90,13 @@ defmodule Beancount.CostSpec do
 
   @doc """
   Render a cost spec as a Beancount `{...}` or `{{...}}` suffix (without leading space).
+
+  ## Examples
+
+      iex> spec = %Beancount.CostSpec{per_amount: Decimal.new("10"), per_currency: "USD", merge: false}
+      iex> Beancount.CostSpec.to_string(spec)
+      "{10 USD}"
+
   """
   @spec to_string(t()) :: binary()
   def to_string(%__MODULE__{} = spec) do

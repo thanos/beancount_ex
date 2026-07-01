@@ -1,8 +1,8 @@
 defmodule Beancount.Engine.Elixir.Reports do
   @moduledoc false
 
-  alias Beancount.Directives.Transaction
-  alias Beancount.Engine.Elixir.PostingAmount
+  alias Beancount.Directives.{Open, Transaction}
+  alias Beancount.Engine.Elixir.{Inventory, Ledger, Lot, PostingAmount}
   alias Beancount.Query.Result
   alias Beancount.Result, as: CheckResult
 
@@ -65,15 +65,34 @@ defmodule Beancount.Engine.Elixir.Reports do
   end
 
   def holdings(directives) do
-    rows =
-      directives
-      |> compute_holdings()
+    ledger = build_ledger(directives)
+    txn_accounts = transaction_accounts(directives)
+
+    inventory_rows =
+      ledger.inventory
+      |> Inventory.holdings()
       |> Enum.filter(fn {account, _} -> account_type?(account, ~w(Assets)) end)
-      |> Enum.sort_by(fn {account, _} -> account end)
-      |> Enum.map(fn {account, holding} ->
-        {units, cost} = format_holding(holding)
-        [account, units, cost]
+      |> Enum.map(fn {account, {units, unit_currency, cost, cost_currency}} ->
+        {account,
+         [
+           account,
+           format_decimal(units) <> " " <> unit_currency,
+           format_decimal(cost) <> " " <> cost_currency
+         ]}
       end)
+      |> Map.new()
+
+    asset_accounts =
+      txn_accounts
+      |> MapSet.union(MapSet.new(Map.keys(inventory_rows)))
+      |> MapSet.to_list()
+      |> Enum.filter(&account_type?(&1, ~w(Assets)))
+      |> Enum.sort()
+
+    rows =
+      asset_accounts
+      |> Enum.map(&holdings_row_for_account(&1, inventory_rows, ledger))
+      |> Enum.reject(&is_nil/1)
 
     %Result{
       columns: ["account", "units", "cost"],
@@ -81,6 +100,17 @@ defmodule Beancount.Engine.Elixir.Reports do
       raw: "",
       status: :ok
     }
+  end
+
+  defp holdings_row_for_account(account, inventory_rows, ledger) do
+    case Map.get(inventory_rows, account) do
+      row when not is_nil(row) -> row
+      _ -> empty_holdings_row(account, ledger)
+    end
+  end
+
+  defp empty_holdings_row(account, ledger) do
+    if Map.has_key?(ledger.opens, account), do: [account, "", ""], else: nil
   end
 
   def journal(directives, account) do
@@ -110,6 +140,7 @@ defmodule Beancount.Engine.Elixir.Reports do
        ) do
     {new_rows, {balance, currency}} =
       postings
+      |> PostingAmount.expand_postings()
       |> Enum.filter(&(&1.account == account))
       |> Enum.map_reduce({balance, currency}, fn posting, {running, currency} ->
         currency = posting.currency || currency
@@ -151,119 +182,108 @@ defmodule Beancount.Engine.Elixir.Reports do
   defp format_balance(%Decimal{} = balance, _), do: format_decimal(balance)
 
   defp balance_report(directives, filter, columns) do
-    balances = compute_balances(directives)
+    ledger = build_ledger(directives)
+    accounts = known_accounts(directives)
+    txn_accounts = transaction_accounts(directives)
 
     rows =
-      balances
-      |> Enum.filter(fn {account, _balance} -> filter.(account) end)
-      |> Enum.sort_by(fn {account, _} -> account end)
-      |> Enum.map(fn {account, {amount, currency}} ->
-        [account, format_decimal(amount) <> " " <> currency]
+      accounts
+      |> Enum.filter(filter)
+      |> Enum.sort()
+      |> Enum.map(fn account ->
+        [account, account_position(ledger.inventory, account)]
       end)
+      |> Enum.filter(&include_balance_row?(&1, ledger, txn_accounts))
 
     %Result{columns: columns, rows: rows, raw: "", status: :ok}
   end
 
-  defp compute_balances(directives) do
-    Enum.reduce(directives, %{}, fn
-      %Transaction{postings: postings}, balances ->
-        postings
-        |> PostingAmount.expand_postings()
-        |> Enum.reduce(balances, &add_posting_balance/2)
+  defp include_balance_row?([account, ""], ledger, txn_accounts) do
+    Map.has_key?(ledger.opens, account) and MapSet.member?(txn_accounts, account)
+  end
 
-      _, balances ->
-        balances
+  defp include_balance_row?([_account, position], _ledger, _txn_accounts), do: position != ""
+
+  defp transaction_accounts(directives) do
+    Enum.reduce(directives, MapSet.new(), fn
+      %Transaction{postings: postings}, set -> add_posting_accounts(set, postings)
+      _, set -> set
     end)
   end
 
-  defp add_posting_balance(posting, balances) do
-    case PostingAmount.balance_contribution(posting) do
-      {currency, amount} ->
-        Map.update(balances, posting.account, {amount, currency}, fn {existing, _} ->
-          {Decimal.add(existing, amount), currency}
-        end)
+  defp known_accounts(directives) do
+    directives
+    |> Enum.reduce(MapSet.new(), fn
+      %Open{account: account}, set -> MapSet.put(set, account)
+      %Transaction{postings: postings}, set -> add_posting_accounts(set, postings)
+      _, set -> set
+    end)
+    |> MapSet.to_list()
+  end
 
-      nil ->
-        balances
+  defp add_posting_accounts(set, postings) do
+    Enum.reduce(postings, set, fn posting, acc ->
+      maybe_add_report_account(acc, posting)
+    end)
+  end
+
+  defp maybe_add_report_account(acc, posting) do
+    if posting_material_for_report?(posting), do: MapSet.put(acc, posting.account), else: acc
+  end
+
+  defp posting_material_for_report?(%{amount: %Decimal{}, currency: currency})
+       when is_binary(currency),
+       do: true
+
+  defp posting_material_for_report?(_), do: false
+
+  defp account_position(inventory, account) do
+    case Map.get(inventory, account, %{}) do
+      currencies when currencies == %{} -> ""
+      currencies -> format_account_currencies(currencies)
     end
   end
 
-  defp compute_holdings(directives) do
-    Enum.reduce(directives, %{}, fn
-      %Transaction{postings: postings}, holdings ->
-        postings
-        |> PostingAmount.expand_postings()
-        |> Enum.reduce(holdings, &add_holding/2)
-
-      _, holdings ->
-        holdings
-    end)
+  defp format_account_currencies(currencies) do
+    currencies
+    |> Enum.flat_map(&format_currency_lots/1)
+    |> Enum.join(", ")
   end
 
-  defp add_holding(posting, holdings) do
-    case {posting.amount, posting.currency} do
-      {%Decimal{} = amount, currency} when is_binary(currency) ->
-        Map.update(
-          holdings,
-          posting.account,
-          holding_state(amount, currency, posting),
-          fn state ->
-            merge_holding(state, amount, currency, posting)
-          end
-        )
+  defp format_currency_lots({currency, lots}) do
+    lots
+    |> Enum.group_by(& &1.cost)
+    |> Enum.map(&format_grouped_lot(&1, currency))
+  end
+
+  defp format_grouped_lot({cost, grouped}, currency) do
+    units = sum_lot_units(grouped)
+    format_lot_position(%Lot{units: units, currency: currency, cost: cost}, currency)
+  end
+
+  defp sum_lot_units(lots) do
+    Enum.reduce(lots, Decimal.new(0), fn lot, acc -> Decimal.add(acc, lot.units) end)
+  end
+
+  defp format_lot_position(%Lot{units: units, cost: cost}, currency) do
+    base = format_decimal(units) <> " " <> currency
+
+    case cost do
+      %Beancount.CostSpec{} = spec when not is_nil(spec.per_amount) ->
+        base <> " { " <> format_decimal(spec.per_amount) <> " " <> spec.per_currency <> "}"
+
+      %Beancount.CostSpec{date: %Date{} = date} ->
+        base <> " {" <> Date.to_iso8601(date) <> "}"
 
       _ ->
-        holdings
+        base
     end
   end
 
-  defp holding_state(amount, currency, posting) do
-    %{
-      unit_amount: amount,
-      unit_currency: currency,
-      cost_amount: cost_amount(posting, amount),
-      cost_currency: cost_currency(posting, currency)
-    }
-  end
-
-  defp merge_holding(state, amount, currency, posting) do
-    if state.unit_currency == currency do
-      %{
-        state
-        | unit_amount: Decimal.add(state.unit_amount, amount),
-          cost_amount: add_optional(state.cost_amount, cost_amount(posting, amount))
-      }
-    else
-      holding_state(amount, currency, posting)
-    end
-  end
-
-  defp cost_amount(posting, default_amount) do
-    case PostingAmount.cost_basis(posting) do
-      {_currency, basis} -> basis
-      nil -> default_amount
-    end
-  end
-
-  defp cost_currency(posting, default_currency) do
-    case PostingAmount.cost_basis(posting) do
-      {currency, _} -> currency
-      nil -> default_currency
-    end
-  end
-
-  defp add_optional(nil, value), do: value
-  defp add_optional(existing, value), do: Decimal.add(existing, value)
-
-  defp format_holding(%{
-         unit_amount: unit_amount,
-         unit_currency: unit_currency,
-         cost_amount: cost_amount,
-         cost_currency: cost_currency
-       }) do
-    units = format_decimal(unit_amount) <> " " <> unit_currency
-    cost = format_decimal(cost_amount) <> " " <> cost_currency
-    {units, cost}
+  defp build_ledger(directives) do
+    directives
+    |> Ledger.new()
+    |> Ledger.process(directives)
   end
 
   defp account_type?(account, roots) do

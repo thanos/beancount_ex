@@ -34,7 +34,7 @@ system. By wrapping it behind a stable Elixir API, `beancount_ex`:
                                         │
                         ┌───────────────┴───────────────┐
                         ▼                               ▼
-              Engine.CLI (default)            Engine.Elixir (v0.3, opt-in)
+              Engine.CLI (default)            Engine.Elixir (v0.4, opt-in)
 ```
 
 ## Installation
@@ -42,9 +42,9 @@ system. By wrapping it behind a stable Elixir API, `beancount_ex`:
 ```elixir
 def deps do
   [
-    {:beancount_ex, "~> 0.3"},
-    # optional: enables Beancount.Explorer.to_dataframe/1
-    {:explorer, "~> 0.9"}
+    {:beancount_ex, "~> 0.4"},
+    # optional: Explorer DataFrames for report tables (see guides/accounting/running_reports.md)
+    {:explorer, "~> 0.11"}
   ]
 end
 ```
@@ -86,14 +86,15 @@ bean = Beancount.render(ledger)
 # Validation through the configured engine
 {:ok, result} = Beancount.check(ledger)
 
-# Parse `.bean` text (v0.3)
+# Parse `.bean` text
 {:ok, directives} = Beancount.parse_text(bean)
 
 # Query (BQL) and reports
 {:ok, result} = Beancount.query(ledger, "SELECT account, sum(position) GROUP BY account")
 {:ok, balances} = Beancount.balances(ledger)
+{:ok, income} = Beancount.income_statement(ledger)
 
-# Optional: turn a result into an Explorer.DataFrame (renders in Livebook)
+# Optional: Explorer DataFrame (requires {:explorer, "~> 0.11"})
 # df = Beancount.Explorer.to_dataframe(balances)
 ```
 
@@ -123,16 +124,23 @@ mix beancount.golden.update   # regenerate golden fixtures
 
 ## Guides
 
-- [Getting Started](guides/getting_started.md)
-- [Parsing](guides/parsing.md)
-- [Rendering](guides/rendering.md)
-- [Engines](guides/engines.md)
-- [Querying](guides/querying.md)
-- [Reporting](guides/reporting.md)
-- [Golden Files](guides/golden_files.md)
-- [Property Testing](guides/property_testing.md)
-- [Oracle Strategy](guides/oracle_strategy.md)
-- Livebook: [Getting Started](guides/livebook/getting_started.livemd), [Reporting](guides/livebook/reporting.livemd)
+### Accounting (build a UI or ledger)
+
+For programmers and LLMs building accounting features:
+
+- [Accounting guides index](guides/accounting/README.md)
+- [Getting started](guides/accounting/getting_started.md)
+- [In context](guides/accounting/in_context.md)
+- [Cookbook](guides/accounting/cookbook.md)
+- [Running reports](guides/accounting/running_reports.md)
+- Livebook: [Getting started](guides/livebook/getting_started.livemd), [Cookbook](guides/livebook/accounting.livemd), [Parsing](guides/livebook/parsing.livemd), [Reporting](guides/livebook/reporting.livemd)
+
+### Library (internals and testing)
+
+- [Library guides index](guides/library.md)
+- [Parsing](guides/parsing.md), [Rendering](guides/rendering.md), [Engines](guides/engines.md)
+- [Querying](guides/querying.md), [Reporting](guides/reporting.md), [Booking](guides/booking.md)
+- [Golden files](guides/golden_files.md), [Property testing](guides/property_testing.md), [Oracle strategy](guides/oracle_strategy.md)
 
 ## License
 

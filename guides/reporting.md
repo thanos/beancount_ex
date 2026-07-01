@@ -43,7 +43,7 @@ df = Beancount.Explorer.to_dataframe(result)
 ```
 
 In Livebook a returned `Explorer.DataFrame` renders automatically as an
-interactive table - which is exactly how the
-[Livebook notebooks](livebook/reporting.livemd) present reports. Explorer is an
+interactive table. See the
+[reporting notebook](livebook/reporting.livemd). Explorer `~> 0.11` is an
 optional dependency: the library installs and runs without it, and the bridge
 module only compiles when Explorer is available.

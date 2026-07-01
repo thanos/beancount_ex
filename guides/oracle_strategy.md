@@ -22,9 +22,10 @@ can be validated against Beancount's observable behavior.
 ## The plan
 
 ```
-v0.1  Beancount  ->  Engine.CLI     ->  Real Beancount      (v0.1)
-v0.3  Beancount  ->  Engine.Elixir                          (native)
-v0.4  Beancount  ->  Engine.Rust                            (native, fast)
+v0.1  Beancount  ->  Engine.CLI     ->  Real Beancount      (default)
+v0.3  Beancount  ->  Engine.Elixir  ->  Parser + structural check/query
+v0.4  Beancount  ->  Engine.Elixir  ->  Full booking parity (golden fixtures)
+v0.5  Beancount  ->  Engine.Rust    ->  Native, fast        (future)
 ```
 
 At every step the public `Beancount.*` API stays identical. Applications built
@@ -47,17 +48,18 @@ on v0.1 keep working unchanged when the engine is swapped.
 On mismatch, `Beancount.Property.Diff` describes which callback diverged and
 the normalized oracle vs native payloads.
 
-### v0.3 parity contract
+### v0.4 parity contract
 
 Equivalence is asserted for:
 
-- structural `check/1` results on simple ledgers (opens, closes, syntactic balance)
+- structural `check/1` results by normalized error category (plus uncategorized
+  error messages when both engines reject a ledger)
 - canned reports: `balances`, `balance_sheet`, `income_statement`, `holdings`
+- full booking semantics (FIFO, LIFO, STRICT, AVERAGE, NONE), balance
+  assertions, pad resolution, and tolerance inference on the golden fixtures
 
-Full booking semantics (FIFO/LIFO, cost-basis reduction, balance assertions,
-pad resolution) are **excluded** until v0.4. Golden fixtures that exercise
-booking are still validated against the CLI oracle; they are not part of the
-native compare contract.
+Golden fixtures exercise booking and validation edge cases against the CLI
+oracle via `Beancount.Compare.compare/3`.
 
 Combined with golden files (deterministic, committed reference output) and
 property tests (broad, generated coverage), this gives two complementary safety

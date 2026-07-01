@@ -14,7 +14,7 @@ defmodule Beancount.Parser.Lexer do
     |> reduce({Enum, :join, [""]})
     |> reduce({Date, :from_iso8601, []})
 
-  account_char = ascii_char([?A..?Z, ?a..?z, ?0..?9])
+  account_char = ascii_char([?A..?Z, ?a..?z, ?0..?9, ?-])
 
   account =
     ascii_char([?A..?Z])
@@ -53,7 +53,7 @@ defmodule Beancount.Parser.Lexer do
 
   @doc false
   def parse_account(text) do
-    case Regex.run(~r/^([A-Z][A-Za-z0-9]*(?::[A-Z][A-Za-z0-9]*)*)/, text) do
+    case Regex.run(~r/^([A-Z][A-Za-z0-9-]*(?::[A-Z][A-Za-z0-9-]*)*)/, text) do
       [match, account] -> {:ok, account, String.slice(text, String.length(match)..-1//1)}
       _ -> account(text) |> unwrap()
     end

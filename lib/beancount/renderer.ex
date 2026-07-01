@@ -100,6 +100,21 @@ defmodule Beancount.Renderer do
   - booleans become `TRUE`/`FALSE`
   - atoms become barewords (useful for accounts/currencies)
   - `Beancount.Value.Account`, `Tag`, and `Amount` for custom directives
+
+  ## Examples
+
+      iex> Beancount.Renderer.format_value("hello") == Beancount.Renderer.quote_string("hello")
+      true
+
+      iex> Beancount.Renderer.format_value(Decimal.new("42"))
+      "42"
+
+      iex> Beancount.Renderer.format_value(~D[2026-01-01])
+      "2026-01-01"
+
+      iex> Beancount.Renderer.format_value(Beancount.account_value("Assets:Bank"))
+      "Assets:Bank"
+
   """
   @spec format_value(term()) :: binary()
   def format_value(%Value.Account{name: name}), do: name
@@ -135,6 +150,16 @@ defmodule Beancount.Renderer do
 
   Keys are emitted in deterministic (sorted) order. Returns an empty list when
   there is no metadata.
+
+  ## Examples
+
+      iex> lines = Beancount.Renderer.render_metadata(%{"note" => "reviewed"})
+      iex> hd(lines) =~ "note:"
+      true
+
+      iex> Beancount.Renderer.render_metadata(%{})
+      []
+
   """
   @spec render_metadata(map(), non_neg_integer()) :: [binary()]
   def render_metadata(metadata, depth \\ 1)
@@ -155,6 +180,12 @@ defmodule Beancount.Renderer do
   Render `#tag` and `^link` suffixes for a transaction header.
 
   Tags are rendered before links, each in sorted order for determinism.
+
+  ## Examples
+
+      iex> Beancount.Renderer.render_tags_and_links(["trip"], ["invoice-1"])
+      " #trip ^invoice-1"
+
   """
   @spec render_tags_and_links([binary()], [binary()]) :: binary()
   def render_tags_and_links(tags, links) do
@@ -169,6 +200,17 @@ defmodule Beancount.Renderer do
   Amounts are right-aligned so that decimal values line up, matching the
   conventional Beancount layout. Posting-level metadata is rendered indented
   beneath its posting.
+
+  ## Examples
+
+      iex> postings = [
+      ...>   Beancount.posting("Assets:Bank", Decimal.new("100"), "USD"),
+      ...>   Beancount.posting("Income:Salary", Decimal.new("-100"), "USD")
+      ...> ]
+      iex> lines = Beancount.Renderer.render_postings(postings)
+      iex> Enum.all?(lines, &String.starts_with?(&1, "  "))
+      true
+
   """
   @spec render_postings([Beancount.Directives.Posting.t()]) :: [binary()]
   def render_postings(postings) do
@@ -266,6 +308,12 @@ defmodule Beancount.Renderer do
   Join header text, metadata lines and body lines into a single fragment.
 
   Used by directives that span multiple lines (such as transactions).
+
+  ## Examples
+
+      iex> Beancount.Renderer.lines_to_fragment(["header", "  posting"])
+      "header\\n  posting"
+
   """
   @spec lines_to_fragment([binary()]) :: binary()
   def lines_to_fragment(lines), do: Enum.join(lines, "\n")

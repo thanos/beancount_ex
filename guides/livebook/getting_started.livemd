@@ -2,21 +2,20 @@
 
 ```elixir
 Mix.install([
-  {:beancount_ex, "~> 0.2"},
-  {:explorer, "~> 0.9"},
+  {:beancount_ex, "~> 0.4"},
   {:kino, "~> 0.13"}
 ])
 ```
 
 ## Build a ledger
 
-Constructors live directly on the `Beancount` module - you build a list of
-typed directive structs.
+Constructors live on `Beancount`. You build a list of typed directive structs.
 
 ```elixir
 ledger = [
   Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"]),
   Beancount.open(~D[2026-01-01], "Income:Salary", ["USD"]),
+  Beancount.open(~D[2026-01-01], "Equity:Opening", ["USD"]),
   Beancount.transaction(~D[2026-01-31], "*", "Employer", "Salary", [
     Beancount.posting("Assets:Bank", Decimal.new("5000"), "USD"),
     Beancount.posting("Income:Salary", Decimal.new("-5000"), "USD")
@@ -26,25 +25,44 @@ ledger = [
 
 ## Render to Beancount text
 
-Rendering is deterministic.
-
 ```elixir
 IO.puts(Beancount.render(ledger))
 ```
 
 ## Check the ledger
 
-This requires the Beancount toolchain (`pip install beancount`). The call
-dispatches through the configured engine.
+With the default CLI engine you need `pip install beancount`. The native engine
+works without it:
 
 ```elixir
+# Optional: use native validation (booking, balance assertions, pad)
+Application.put_env(:beancount_ex, :engine, Beancount.Engine.Elixir)
+
 case Beancount.check(ledger) do
   {:ok, result} -> result.status
   {:error, result} -> result.normalized.errors
 end
 ```
 
-## Next
+## Parse existing text
 
-See the [reporting notebook](reporting.livemd) to turn a ledger into interactive
-tables with Explorer.
+```elixir
+bean = Beancount.render(ledger)
+{:ok, parsed} = Beancount.parse_text(bean)
+Beancount.render(parsed) == bean
+```
+
+## Reports preview
+
+```elixir
+Application.put_env(:beancount_ex, :engine, Beancount.Engine.Elixir)
+
+{:ok, result} = Beancount.balances(ledger)
+Beancount.Query.Result.to_maps(result)
+```
+
+## Next notebooks
+
+- [Accounting cookbook](accounting.livemd) - cash, salary, trading patterns
+- [Parsing and validation](parsing.livemd) - import, round-trip, errors
+- [Reporting with Explorer](reporting.livemd) - DataFrames and dashboards

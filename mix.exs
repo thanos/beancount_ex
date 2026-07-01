@@ -1,7 +1,7 @@
 defmodule Beancount.MixProject do
   use Mix.Project
 
-  @version "0.3.0"
+  @version "0.4.0"
   @source_url "https://github.com/beancount-ex/beancount_ex"
 
   def project do
@@ -40,7 +40,7 @@ defmodule Beancount.MixProject do
       {:decimal, "~> 3.1", override: true},
       {:jason, "~> 1.4"},
       {:nimble_parsec, "~> 1.4"},
-      {:explorer, "~> 0.9", optional: true},
+      {:explorer, "~> 0.11.1", optional: true},
       {:stream_data, "~> 1.0", only: [:test, :dev]},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
@@ -67,9 +67,14 @@ defmodule Beancount.MixProject do
     [
       main: "readme",
       extras: [
-        "README.md",
         "CHANGELOG.md",
         "LICENSE",
+        "guides/library.md",
+        "guides/accounting/README.md",
+        "guides/accounting/getting_started.md",
+        "guides/accounting/in_context.md",
+        "guides/accounting/cookbook.md",
+        "guides/accounting/running_reports.md",
         "guides/getting_started.md",
         "guides/parsing.md",
         "guides/rendering.md",
@@ -77,13 +82,21 @@ defmodule Beancount.MixProject do
         "guides/querying.md",
         "guides/reporting.md",
         "guides/golden_files.md",
+        "guides/booking.md",
+        "guides/reconciliation.md",
+        "guides/performance.md",
         "guides/property_testing.md",
         "guides/oracle_strategy.md",
         "guides/livebook/getting_started.livemd",
+        "guides/livebook/accounting.livemd",
+        "guides/livebook/parsing.livemd",
         "guides/livebook/reporting.livemd"
       ],
       groups_for_extras: [
-        Guides: ~r/guides\/.?/
+        Accounting: ~r/guides\/(accounting\/|getting_started\.md)/,
+        Library:
+          ~r/guides\/(parsing|rendering|engines|querying|reporting|golden_files|booking|reconciliation|performance|property_testing|oracle_strategy|library)\./,
+        Livebooks: ~r/guides\/livebook\//
       ],
       groups_for_modules: [
         "Public API": [Beancount, Beancount.Parser, Beancount.Compare],

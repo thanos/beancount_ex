@@ -28,6 +28,12 @@ defmodule Beancount.Query do
 
   @doc """
   Return the configured path to the `bean-query` executable.
+
+  ## Examples
+
+      iex> is_binary(Beancount.Query.bean_query_path())
+      true
+
   """
   @spec bean_query_path() :: String.t()
   def bean_query_path do
@@ -36,6 +42,12 @@ defmodule Beancount.Query do
 
   @doc """
   Whether the configured `bean-query` executable is available on this machine.
+
+  ## Examples
+
+      iex> is_boolean(Beancount.Query.available?())
+      true
+
   """
   @spec available?() :: boolean()
   def available? do
@@ -45,6 +57,18 @@ defmodule Beancount.Query do
 
   @doc """
   Run `bql` against ledger `text`, writing it to a temporary file first.
+
+  ## Examples
+
+  Requires `bean-query` on `PATH`:
+
+      text = "2026-01-01 open Assets:Bank USD\\n"
+
+      if Beancount.Query.available?() do
+        {:ok, %Beancount.Query.Result{}} =
+          Beancount.Query.query_text(text, "SELECT account GROUP BY account")
+      end
+
   """
   @spec query_text(binary(), binary()) :: {:ok, QueryResult.t()} | {:error, Result.t()}
   def query_text(text, bql) when is_binary(text) and is_binary(bql) do
@@ -64,6 +88,16 @@ defmodule Beancount.Query do
   Run `bql` against a `.bean` file on disk.
 
   Raises `Beancount.Query.NotInstalledError` if `bean-query` is not available.
+
+  ## Examples
+
+      path = Path.join(System.tmp_dir!(), "query_file_example.bean")
+      File.write!(path, "2026-01-01 open Assets:Bank USD\\n")
+
+      if Beancount.Query.available?() do
+        {:ok, _} = Beancount.Query.query_file(path, "SELECT account GROUP BY account")
+      end
+
   """
   @spec query_file(Path.t(), binary()) :: {:ok, QueryResult.t()} | {:error, Result.t()}
   def query_file(path, bql) when is_binary(bql) do
@@ -108,6 +142,15 @@ defmodule Beancount.Query do
 
   The first non-empty line is treated as the header. Empty input yields
   `{[], []}`. Quoted fields may contain embedded newlines.
+
+  ## Examples
+
+      iex> Beancount.Query.parse_csv("account,balance\\nAssets:Bank,100 USD\\n")
+      {["account", "balance"], [["Assets:Bank", "100 USD"]]}
+
+      iex> Beancount.Query.parse_csv("")
+      {[], []}
+
   """
   @spec parse_csv(binary()) :: {[String.t()], [[String.t()]]}
   def parse_csv(csv) do

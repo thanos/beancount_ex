@@ -18,6 +18,18 @@ if Code.ensure_loaded?(Explorer.DataFrame) do
     Convert a `Beancount.Query.Result` into an `Explorer.DataFrame`.
 
     Columns are preserved in order. An empty result yields an empty data frame.
+
+    ## Examples
+
+        result = %Beancount.Query.Result{
+          columns: ["account", "balance"],
+          rows: [["Assets:Bank", "100 USD"]]
+        }
+
+        df = Beancount.Explorer.to_dataframe(result)
+        Explorer.DataFrame.names(df)
+        # => ["account", "balance"]
+
     """
     @spec to_dataframe(Result.t()) :: Explorer.DataFrame.t()
     def to_dataframe(%Result{columns: [], rows: _}) do

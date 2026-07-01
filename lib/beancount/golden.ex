@@ -16,12 +16,25 @@ defmodule Beancount.Golden do
 
   @doc """
   Root directory containing all golden fixtures.
+
+  ## Examples
+
+      iex> Beancount.Golden.root() |> String.ends_with?("test/fixtures/golden")
+      true
+
   """
   @spec root() :: Path.t()
   def root, do: Path.join([File.cwd!(), "test", "fixtures", "golden"])
 
   @doc """
   List all golden fixture case directories.
+
+  ## Examples
+
+      iex> cases = Beancount.Golden.cases()
+      iex> is_list(cases)
+      true
+
   """
   @spec cases() :: [Path.t()]
   def cases do
@@ -39,6 +52,14 @@ defmodule Beancount.Golden do
 
   @doc """
   Evaluate a fixture's `input.exs` and return its directive list.
+
+  ## Examples
+
+      case_dir = Path.join(Beancount.Golden.root(), "basic_txn")
+      directives = Beancount.Golden.load_directives(case_dir)
+      length(directives) > 0
+      # => true
+
   """
   @spec load_directives(Path.t()) :: [Beancount.Directive.t()]
   def load_directives(case_dir) do
@@ -48,6 +69,14 @@ defmodule Beancount.Golden do
 
   @doc """
   Render a fixture's directives to `.bean` text.
+
+  ## Examples
+
+      case_dir = Path.join(Beancount.Golden.root(), "basic_txn")
+      bean = Beancount.Golden.render(case_dir)
+      String.contains?(bean, "open Assets:Bank")
+      # => true
+
   """
   @spec render(Path.t()) :: binary()
   def render(case_dir) do
@@ -56,12 +85,28 @@ defmodule Beancount.Golden do
 
   @doc """
   Read a fixture's expected `.bean` text, or `nil` if it does not exist.
+
+  ## Examples
+
+      case_dir = Path.join(Beancount.Golden.root(), "basic_txn")
+      bean = Beancount.Golden.expected_bean(case_dir)
+      is_binary(bean)
+      # => true
+
   """
   @spec expected_bean(Path.t()) :: binary() | nil
   def expected_bean(case_dir), do: read(bean_path(case_dir))
 
   @doc """
   Read and decode a fixture's expected normalized result, or `nil`.
+
+  ## Examples
+
+      case_dir = Path.join(Beancount.Golden.root(), "basic_txn")
+      result = Beancount.Golden.expected_result(case_dir)
+      result["status"]
+      # => "ok"
+
   """
   @spec expected_result(Path.t()) :: map() | nil
   def expected_result(case_dir) do

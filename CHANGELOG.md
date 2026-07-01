@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-06-30
+
+Full native booking parity, reconciliation harness, and performance benchmarks.
+
+### Added
+
+- Native booking engine (`Inventory`, `Booking`, `Lot`) with FIFO, LIFO, STRICT,
+  AVERAGE, and NONE methods.
+- Balance assertion evaluation with tolerance inference (`BalanceCheck`, `Tolerance`).
+- Pad resolution (`PadResolver`) with per-account pending pads.
+- Option processing (`Options`) for tolerance and operating currency settings.
+- Error category normalization in `Beancount.Compare.compare/3`.
+- Reconciliation harness: vendored `example.beancount` and
+  `test/beancount/reconciliation_test.exs`.
+- Benchmarks under `bench/` and guides: `booking.md`, `reconciliation.md`,
+  `performance.md`.
+- Parser support for org-mode headers, multiline `query` strings, and hyphens in
+  account names.
+
+### Changed
+
+- All 30 golden fixtures pass `compare/3` as `{:ok, :equivalent}`.
+- `Ledger` processes directives in date order with point-in-time open/close checks.
+- `compare/3` skips canned queries when both engines agree on equivalent check
+  errors; no more `:deferred` return value.
+
+[Unreleased]: https://github.com/beancount-ex/beancount_ex/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/beancount-ex/beancount_ex/compare/v0.3.0...v0.4.0
+
 ## [0.3.0] - 2026-06-30
 
 Native parser, Elixir engine, and oracle comparison.
@@ -28,7 +57,6 @@ Native parser, Elixir engine, and oracle comparison.
 - `decimal` dependency bumped to `~> 3.1` (security fix).
 - `Beancount.check_file/1` routes through the configured engine.
 
-[Unreleased]: https://github.com/beancount-ex/beancount_ex/compare/v0.3.0...HEAD
 [0.3.0]: https://github.com/beancount-ex/beancount_ex/compare/v0.2.0...v0.3.0
 
 ## [0.2.0] - 2026-06-30

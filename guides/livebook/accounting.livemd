@@ -1,0 +1,115 @@
+# Accounting cookbook (Livebook)
+
+Recipes from the [accounting cookbook](../accounting/cookbook.md), runnable in
+Livebook.
+
+```elixir
+Mix.install([
+  {:beancount_ex, "~> 0.4"},
+  {:kino, "~> 0.13"}
+])
+
+Application.put_env(:beancount_ex, :engine, Beancount.Engine.Elixir)
+```
+
+## Open accounts
+
+```elixir
+base_opens = [
+  Beancount.open(~D[2026-01-01], "Assets:US:BofA:Checking", ["USD"]),
+  Beancount.open(~D[2026-01-01], "Assets:Cash", ["USD"]),
+  Beancount.open(~D[2026-01-01], "Liabilities:US:Amex:Card", ["USD"]),
+  Beancount.open(~D[2026-01-01], "Expenses:Food:Restaurant", ["USD"]),
+  Beancount.open(~D[2026-01-01], "Income:US:Acme:Salary", ["USD"]),
+  Beancount.open(~D[2026-01-01], "Equity:Opening", ["USD"])
+]
+```
+
+## Cash withdrawal
+
+```elixir
+cash_withdrawal =
+  Beancount.transaction(~D[2026-06-28], "*", "ATM", "Withdrawal", [
+    Beancount.posting("Assets:US:BofA:Checking", Decimal.new("-200"), "USD"),
+    Beancount.posting("Assets:Cash", nil, nil)
+  ])
+```
+
+## Credit card meal
+
+```elixir
+restaurant =
+  Beancount.transaction(~D[2026-05-23], "*", "CAFE", "Dinner", [
+    Beancount.posting("Liabilities:US:Amex:Card", Decimal.new("-45.00"), "USD"),
+    Beancount.posting("Expenses:Food:Restaurant", nil, nil)
+  ])
+```
+
+## Salary deposit
+
+```elixir
+payroll =
+  Beancount.transaction(~D[2026-01-31], "*", "ACME INC", "PAYROLL", [
+    Beancount.posting("Assets:US:BofA:Checking", Decimal.new("3500"), "USD"),
+    Beancount.posting("Income:US:Acme:Salary", Decimal.new("-3500"), "USD")
+  ])
+```
+
+## Stock purchase and sale
+
+```elixir
+investment_opens = [
+  Beancount.open(~D[2026-01-01], "Assets:US:Broker:AAPL", ["AAPL"], booking: "FIFO"),
+  Beancount.open(~D[2026-01-01], "Assets:US:Broker:Cash", ["USD"])
+]
+
+buy =
+  Beancount.transaction(~D[2026-01-15], "*", "Broker", "Buy AAPL", [
+    Beancount.posting("Assets:US:Broker:AAPL", Decimal.new("10"), "AAPL",
+      cost: %{amount: Decimal.new("150"), currency: "USD"}
+    ),
+    Beancount.posting("Assets:US:Broker:Cash", Decimal.new("-1500"), "USD")
+  ])
+
+sell =
+  Beancount.transaction(~D[2026-06-01], "*", "Broker", "Sell AAPL", [
+    Beancount.posting("Assets:US:Broker:AAPL", Decimal.new("-10"), "AAPL",
+      price: %{amount: Decimal.new("180"), currency: "USD", type: :unit}
+    ),
+    Beancount.posting("Assets:US:Broker:Cash", Decimal.new("1800"), "USD")
+  ])
+```
+
+## Validate and inspect
+
+```elixir
+ledger = base_opens ++ investment_opens ++ [cash_withdrawal, restaurant, payroll, buy, sell]
+
+case Beancount.check(ledger) do
+  {:ok, _} -> :ok
+  {:error, r} -> r.normalized.errors
+end
+```
+
+```elixir
+{:ok, income} = Beancount.income_statement(ledger)
+Kino.DataTable.new(Beancount.Query.Result.to_maps(income))
+```
+
+```elixir
+{:ok, holdings} = Beancount.holdings(ledger)
+Kino.DataTable.new(Beancount.Query.Result.to_maps(holdings))
+```
+
+## Balance assertion with pad
+
+```elixir
+reconcile = [
+  Beancount.open(~D[2026-01-01], "Assets:Cash", ["USD"]),
+  Beancount.open(~D[2026-01-01], "Equity:Opening", ["USD"]),
+  Beancount.pad(~D[2026-01-02], "Assets:Cash", "Equity:Opening"),
+  Beancount.balance(~D[2026-01-03], "Assets:Cash", Decimal.new("100"), "USD")
+]
+
+Beancount.check(reconcile)
+```

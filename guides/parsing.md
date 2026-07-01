@@ -1,5 +1,10 @@
 # Parsing
 
+> **Accounting track:** to use the parser in an application, see
+> [Accounting: Getting started](accounting/getting_started.md) and
+> [Parsing (Livebook)](livebook/parsing.livemd). This page documents the
+> library implementation.
+
 v0.3 adds `Beancount.Parser`, a native NimbleParsec-based parser that turns
 `.bean` text into the same typed directive structs you build with the public
 `Beancount.*` constructors.
