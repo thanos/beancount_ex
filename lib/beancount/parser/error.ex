@@ -15,6 +15,16 @@ defmodule Beancount.Parser.Error do
           token: term() | nil
         }
 
+  @doc """
+  Build a parse error exception from keyword options.
+
+  ## Examples
+
+      error = Beancount.Parser.Error.exception(message: "syntax error", line: 3, column: 5)
+      error.message
+      # => "syntax error at line 3, column 5"
+
+  """
   @impl true
   def exception(opts) do
     message = Keyword.get(opts, :message, "parse error")

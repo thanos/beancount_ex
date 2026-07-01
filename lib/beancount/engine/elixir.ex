@@ -12,9 +12,35 @@ defmodule Beancount.Engine.Elixir do
   alias Beancount.Engine.Elixir.{Reports, Validator}
   alias Beancount.{Parser, Renderer, Result}
 
+  @doc """
+  Render directives to `.bean` text via `Beancount.Renderer`.
+
+  ## Examples
+
+      iex> Beancount.Engine.Elixir.render([Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"])])
+      "2026-01-01 open Assets:Bank USD\\n"
+
+  """
   @impl Beancount.Engine
   def render(directives) when is_list(directives), do: Renderer.render(directives)
 
+  @doc """
+  Parse and validate `.bean` text with the native booking engine.
+
+  ## Examples
+
+      iex> text = \"\"\"
+      ...> 2026-01-01 open Assets:Bank USD
+      ...> 2026-01-01 open Income:Salary USD
+      ...> 2026-01-01 open Equity:Opening USD
+      ...>
+      ...> 2026-01-31 * "Employer" "Salary"
+      ...>   Assets:Bank     100 USD
+      ...>   Income:Salary  -100 USD
+      ...> \"\"\"
+      iex> {:ok, %Beancount.Result{status: :ok}} = Beancount.Engine.Elixir.check(text)
+
+  """
   @impl Beancount.Engine
   def check(text) when is_binary(text) do
     case Parser.parse_text(text) do
@@ -23,6 +49,26 @@ defmodule Beancount.Engine.Elixir do
     end
   end
 
+  @doc """
+  Read and validate a `.bean` file from disk.
+
+  ## Examples
+
+      path = Path.join(System.tmp_dir!(), "elixir_check.bean")
+
+      File.write!(path, \"\"\"
+      2026-01-01 open Assets:Bank USD
+      2026-01-01 open Income:Salary USD
+      2026-01-01 open Equity:Opening USD
+
+      2026-01-31 * "Employer" "Salary"
+        Assets:Bank     100 USD
+        Income:Salary  -100 USD
+      \"\"\")
+
+      {:ok, %Beancount.Result{status: :ok}} = Beancount.Engine.Elixir.check_file(path)
+
+  """
   @impl Beancount.Engine
   def check_file(path) do
     case File.read(path) do
@@ -37,6 +83,26 @@ defmodule Beancount.Engine.Elixir do
     end
   end
 
+  @doc """
+  Parse the ledger and run a BQL query with native canned reports.
+
+  ## Examples
+
+      iex> text = \"\"\"
+      ...> 2026-01-01 open Assets:Bank USD
+      ...> 2026-01-01 open Income:Salary USD
+      ...> 2026-01-01 open Equity:Opening USD
+      ...>
+      ...> 2026-01-31 * "Employer" "Salary"
+      ...>   Assets:Bank     100 USD
+      ...>   Income:Salary  -100 USD
+      ...> \"\"\"
+      iex> {:ok, %Beancount.Query.Result{columns: cols}} =
+      ...>   Beancount.Engine.Elixir.query(text, "SELECT account, sum(position) AS balance GROUP BY account ORDER BY account")
+      iex> cols
+      ["account", "balance"]
+
+  """
   @impl Beancount.Engine
   def query(text, bql) when is_binary(text) and is_binary(bql) do
     case Parser.parse_text(text) do

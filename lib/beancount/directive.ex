@@ -19,6 +19,13 @@ defprotocol Beancount.Directive do
 
   The returned value is `t:iodata/0` without a trailing newline. The renderer
   takes care of separating directives.
+
+  ## Examples
+
+      iex> open = Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"])
+      iex> open |> Beancount.Directive.to_bean() |> IO.iodata_to_binary()
+      "2026-01-01 open Assets:Bank USD"
+
   """
   @spec to_bean(t()) :: iodata()
   def to_bean(directive)

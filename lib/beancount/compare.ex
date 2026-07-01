@@ -27,6 +27,21 @@ defmodule Beancount.Compare do
 
   Returns `{:ok, :equivalent}` when normalized results match, or
   `{:error, %Diff{}}` describing the first mismatch.
+
+  ## Examples
+
+      iex> ledger = [
+      ...>   Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"]),
+      ...>   Beancount.open(~D[2026-01-01], "Income:Salary", ["USD"]),
+      ...>   Beancount.open(~D[2026-01-01], "Equity:Opening", ["USD"]),
+      ...>   Beancount.transaction(~D[2026-01-31], "*", nil, "Salary", [
+      ...>     Beancount.posting("Assets:Bank", Decimal.new("100"), "USD"),
+      ...>     Beancount.posting("Income:Salary", Decimal.new("-100"), "USD")
+      ...>   ])
+      ...> ]
+      iex> Beancount.Compare.compare(Beancount.Engine.Elixir, Beancount.Engine.Elixir, ledger)
+      {:ok, :equivalent}
+
   """
   @spec compare(module(), module(), Beancount.directive() | binary()) ::
           {:ok, :equivalent} | {:error, Diff.t()}

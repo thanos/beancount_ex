@@ -27,6 +27,12 @@ defmodule Beancount.Checker do
 
   @doc """
   Return the configured path to the `bean-check` executable.
+
+  ## Examples
+
+      iex> is_binary(Beancount.Checker.bean_check_path())
+      true
+
   """
   @spec bean_check_path() :: String.t()
   def bean_check_path do
@@ -35,6 +41,12 @@ defmodule Beancount.Checker do
 
   @doc """
   Whether the configured `bean-check` executable is available on this machine.
+
+  ## Examples
+
+      iex> is_boolean(Beancount.Checker.available?())
+      true
+
   """
   @spec available?() :: boolean()
   def available? do
@@ -44,6 +56,22 @@ defmodule Beancount.Checker do
 
   @doc """
   Check Beancount text by writing it to a temporary file and validating it.
+
+  ## Examples
+
+      text = \"\"\"
+      2026-01-01 open Assets:Bank USD
+      2026-01-01 open Income:Salary USD
+
+      2026-01-31 * "Employer" "Salary"
+        Assets:Bank     100 USD
+        Income:Salary  -100 USD
+      \"\"\"
+
+      if Beancount.Checker.available?() do
+        {:ok, %Beancount.Result{status: :ok}} = Beancount.Checker.check_text(text)
+      end
+
   """
   @spec check_text(binary()) :: {:ok, Result.t()} | {:error, Result.t()}
   def check_text(text) when is_binary(text) do
@@ -61,6 +89,24 @@ defmodule Beancount.Checker do
   Check a `.bean` file on disk, returning a normalized `Beancount.Result`.
 
   Raises `Beancount.Checker.NotInstalledError` if `bean-check` is not available.
+
+  ## Examples
+
+      path = Path.join(System.tmp_dir!(), "checker_example.bean")
+
+      File.write!(path, \"\"\"
+      2026-01-01 open Assets:Bank USD
+      2026-01-01 open Income:Salary USD
+
+      2026-01-31 * "Employer" "Salary"
+        Assets:Bank     100 USD
+        Income:Salary  -100 USD
+      \"\"\")
+
+      if Beancount.Checker.available?() do
+        {:ok, _} = Beancount.Checker.check_file(path)
+      end
+
   """
   @spec check_file(Path.t()) :: {:ok, Result.t()} | {:error, Result.t()}
   def check_file(path) do

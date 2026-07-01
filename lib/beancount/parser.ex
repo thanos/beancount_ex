@@ -17,6 +17,17 @@ defmodule Beancount.Parser do
   Parse a directive list or `.bean` text.
 
   Lists pass through unchanged; binaries are parsed.
+
+  ## Examples
+
+      iex> {:ok, [open]} = Beancount.Parser.parse([Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"])])
+      iex> open.account
+      "Assets:Bank"
+
+      iex> {:ok, [open]} = Beancount.Parser.parse("2026-01-01 open Assets:Bank USD\\n")
+      iex> open.account
+      "Assets:Bank"
+
   """
   @spec parse([Beancount.directive()] | binary()) ::
           {:ok, [Beancount.directive()]} | {:error, Error.t()}
@@ -26,12 +37,28 @@ defmodule Beancount.Parser do
 
   @doc """
   Parse `.bean` text into a directive list.
+
+  ## Examples
+
+      iex> {:ok, [open | _]} = Beancount.Parser.parse_text("2026-01-01 open Assets:Bank USD\\n")
+      iex> open.account
+      "Assets:Bank"
+
   """
   @spec parse_text(binary()) :: {:ok, [Beancount.directive()]} | {:error, Error.t()}
   def parse_text(text) when is_binary(text), do: Grammar.parse(text)
 
   @doc """
   Read and parse a `.bean` file from disk.
+
+  ## Examples
+
+      path = Path.join(System.tmp_dir!(), "parser_example.bean")
+      File.write!(path, "2026-01-01 commodity USD\\n")
+
+      {:ok, [%Beancount.Directives.Commodity{currency: "USD"}]} =
+        Beancount.Parser.parse_file(path)
+
   """
   @spec parse_file(Path.t()) :: {:ok, [Beancount.directive()]} | {:error, term()}
   def parse_file(path) do
@@ -43,6 +70,14 @@ defmodule Beancount.Parser do
 
   @doc """
   Parse `.bean` text, raising `Beancount.Parser.Error` on failure.
+
+  ## Examples
+
+      iex> Beancount.Parser.parse!("2026-01-01 open Assets:Bank USD\\n")
+      ...> |> hd()
+      ...> |> Map.get(:account)
+      "Assets:Bank"
+
   """
   @spec parse!(binary()) :: [Beancount.directive()]
   def parse!(text) when is_binary(text) do

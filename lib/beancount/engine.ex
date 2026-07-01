@@ -17,11 +17,28 @@ defmodule Beancount.Engine do
 
   @doc """
   Render a directive stream into `.bean` text.
+
+  ## Examples
+
+      iex> Beancount.Engine.CLI.render([Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"])])
+      "2026-01-01 open Assets:Bank USD\\n"
+
   """
   @callback render(term()) :: binary()
 
   @doc """
   Check a `.bean` document, returning a normalized `Beancount.Result`.
+
+  ## Examples
+
+  Requires `bean-check` on `PATH`, or use `Beancount.Engine.Elixir.check/1`:
+
+      text = "2026-01-01 open Assets:Bank USD\\n"
+
+      if Beancount.Checker.available?() do
+        {:ok, %Beancount.Result{}} = Beancount.Engine.CLI.check(text)
+      end
+
   """
   @callback check(binary()) ::
               {:ok, Beancount.Result.t()} | {:error, Beancount.Result.t()}
@@ -31,6 +48,16 @@ defmodule Beancount.Engine do
 
   Engines that shell out to CLI tools should preserve the file path so
   `include` directives resolve relative to the ledger file.
+
+  ## Examples
+
+      path = Path.join(System.tmp_dir!(), "engine_check.bean")
+      File.write!(path, "2026-01-01 open Assets:Bank USD\\n")
+
+      if Beancount.Checker.available?() do
+        {:ok, _} = Beancount.Engine.CLI.check_file(path)
+      end
+
   """
   @callback check_file(Path.t()) ::
               {:ok, Beancount.Result.t()} | {:error, Beancount.Result.t()}
@@ -43,8 +70,24 @@ defmodule Beancount.Engine do
   `Beancount.Query.Result` on success, or a `Beancount.Result` describing the
   failure otherwise.
 
-  Every engine - including future native engines - must implement this so the
-  oracle contract stays uniform across backends.
+  ## Examples
+
+      text = \"\"\"
+      2026-01-01 open Assets:Bank USD
+      2026-01-01 open Income:Salary USD
+      2026-01-01 open Equity:Opening USD
+
+      2026-01-31 * "Employer" "Salary"
+        Assets:Bank     100 USD
+        Income:Salary  -100 USD
+      \"\"\"
+
+      {:ok, %Beancount.Query.Result{columns: cols}} =
+        Beancount.Engine.Elixir.query(text, "SELECT account, sum(position) AS balance GROUP BY account ORDER BY account")
+
+      cols
+      # => ["account", "balance"]
+
   """
   @callback query(binary(), binary()) ::
               {:ok, Beancount.Query.Result.t()} | {:error, Beancount.Result.t()}
