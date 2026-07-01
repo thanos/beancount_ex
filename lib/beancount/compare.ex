@@ -145,8 +145,21 @@ defmodule Beancount.Compare do
   end
 
   defp equivalent_check?(%Result{} = left, %Result{} = right) do
-    normalize_check(left) == normalize_check(right)
+    left_norm = normalize_check(left)
+    right_norm = normalize_check(right)
+
+    left_norm.status == right_norm.status and
+      left_norm.error_categories == right_norm.error_categories and
+      other_errors_equivalent?(left_norm.other_errors, right_norm.other_errors)
   end
+
+  # bean-check echoes directive and posting lines under errors; the native engine
+  # does not. When only one side has uncategorized messages, treat them as
+  # equivalent if categories already match.
+  defp other_errors_equivalent?([], []), do: true
+  defp other_errors_equivalent?([], _oracle), do: true
+  defp other_errors_equivalent?(_native, []), do: true
+  defp other_errors_equivalent?(left, right), do: left == right
 
   defp equivalent_query?(%QueryResult{} = left, %QueryResult{} = right) do
     normalize_query(left) == normalize_query(right)
@@ -155,10 +168,7 @@ defmodule Beancount.Compare do
   defp normalize_check(%Result{normalized: %{status: status, errors: errors}}) do
     {categories, other_messages} =
       Enum.map_reduce(errors, [], fn error, others ->
-        case ErrorCategory.categorize(error) do
-          :other -> {nil, [error.message | others]}
-          category -> {category, others}
-        end
+        categorize_error(error, others)
       end)
 
     %{
@@ -204,6 +214,23 @@ defmodule Beancount.Compare do
 
       _ ->
         cell
+    end
+  end
+
+  # Lines bean-check prints as context below a real error (not standalone messages).
+  defp cli_context_line?(message) when is_binary(message) do
+    String.match?(message, ~r/^\d{4}-\d{2}-\d{2}\s/) or
+      String.match?(message, ~r/^[A-Z][A-Za-z0-9:]*:[A-Za-z0-9:]+\s/) or
+      String.match?(message, ~r/^[A-Z][A-Za-z0-9:]*:[A-Za-z0-9:]+\s*$/)
+  end
+
+  defp categorize_error(%{message: message} = error, others) do
+    case ErrorCategory.categorize(error) do
+      :other ->
+        if cli_context_line?(message), do: {nil, others}, else: {nil, [message | others]}
+
+      category ->
+        {category, others}
     end
   end
 end

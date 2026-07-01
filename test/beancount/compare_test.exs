@@ -90,6 +90,17 @@ defmodule Beancount.CompareTest do
     assert message =~ "check"
   end
 
+  test "compare/3 ignores bean-check context lines in other_errors" do
+    ledger = Beancount.render(@ledger)
+
+    assert {:ok, :equivalent} =
+             Beancount.Compare.compare(
+               Beancount.CompareTest.CLIContextOracle,
+               Beancount.CompareTest.CLIContextNative,
+               ledger
+             )
+  end
+
   test "compare/3 rejects different uncategorized errors" do
     ledger = Beancount.render(@ledger)
 
@@ -143,6 +154,62 @@ defmodule Beancount.CompareTest do
     assert {:error, %Beancount.Result{status: :error}} =
              Beancount.BrokenQueryEngine.query("ledger", "SELECT account")
   end
+end
+
+defmodule Beancount.CompareTest.CLIContextOracle do
+  @behaviour Beancount.Engine
+
+  @impl true
+  def render(_directives), do: ""
+
+  @impl true
+  def check(_text) do
+    {:error,
+     %Beancount.Result{
+       status: :error,
+       normalized: %{
+         status: :error,
+         errors: [
+           %{line: 3, message: "Balance failed for 'Assets:Foo': expected 2 USD"},
+           %{line: nil, message: "2026-01-01 balance Assets:Foo  2 USD"},
+           %{line: nil, message: "Assets:Cash    10 USD"}
+         ]
+       }
+     }}
+  end
+
+  @impl true
+  def check_file(_path), do: check("")
+
+  @impl true
+  def query(_text, _bql),
+    do: {:ok, %Beancount.Query.Result{columns: [], rows: [], raw: "", status: :ok}}
+end
+
+defmodule Beancount.CompareTest.CLIContextNative do
+  @behaviour Beancount.Engine
+
+  @impl true
+  def render(_directives), do: ""
+
+  @impl true
+  def check(_text) do
+    {:error,
+     %Beancount.Result{
+       status: :error,
+       normalized: %{
+         status: :error,
+         errors: [%{line: 3, message: "Balance failed for 'Assets:Foo': expected 2 USD"}]
+       }
+     }}
+  end
+
+  @impl true
+  def check_file(_path), do: check("")
+
+  @impl true
+  def query(_text, _bql),
+    do: {:ok, %Beancount.Query.Result{columns: [], rows: [], raw: "", status: :ok}}
 end
 
 defmodule Beancount.CompareTest.OtherErrorA do
