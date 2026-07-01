@@ -12,15 +12,15 @@ ledger = [
 
 ledger =
   ledger ++
-    for index <- 1..500,
-        do: [
-          Beancount.open(~D[2026-01-01], "Assets:Tmp#{index}", ["USD"]),
-          Beancount.transaction(~D[2026-01-31], "*", nil, "Seed #{index}", [
-            Beancount.posting("Assets:Tmp#{index}", Decimal.new("1"), "USD"),
-            Beancount.posting("Income:Salary", Decimal.new("-1"), "USD")
-          ])
-        ]
-        |> List.flatten()
+    Enum.flat_map(1..500, fn index ->
+      [
+        Beancount.open(~D[2026-01-01], "Assets:Tmp#{index}", ["USD"]),
+        Beancount.transaction(~D[2026-01-31], "*", nil, "Seed #{index}", [
+          Beancount.posting("Assets:Tmp#{index}", Decimal.new("1"), "USD"),
+          Beancount.posting("Income:Salary", Decimal.new("-1"), "USD")
+        ])
+      ]
+    end)
 
 bql =
   "SELECT account, sum(position) AS balance WHERE account ~ \"^Assets\" GROUP BY account ORDER BY account"
