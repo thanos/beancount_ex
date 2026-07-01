@@ -92,6 +92,30 @@ defmodule Beancount.Engine.Elixir.OptionsTest do
     assert Decimal.equal?(options.tolerance_multiplier, Decimal.new("2"))
   end
 
+  test "apply/2 rejects invalid tolerance_multiplier" do
+    {_options, errors} =
+      Options.apply(Options.new(), option("tolerance_multiplier", "not-a-number"))
+
+    assert [%{message: message}] = errors
+    assert message =~ "tolerance_multiplier"
+  end
+
+  test "apply/2 rejects non-string inferred_tolerance_default values" do
+    {_options, errors} =
+      Options.apply(Options.new(), option("inferred_tolerance_default", true))
+
+    assert [%{message: message}] = errors
+    assert message =~ "inferred_tolerance_default"
+  end
+
+  test "apply/2 rejects invalid infer_tolerance_from_cost strings" do
+    {_options, errors} =
+      Options.apply(Options.new(), option("infer_tolerance_from_cost", "MAYBE"))
+
+    assert [%{message: message}] = errors
+    assert message =~ "syntax error"
+  end
+
   test "apply/2 ignores title and unknown options" do
     options = Options.new()
 

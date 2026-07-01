@@ -118,4 +118,31 @@ defmodule Beancount.Engine.Elixir.DirectiveSortTest do
     assert pushtag_idx < payroll_idx
     assert payroll_idx < balance_idx
   end
+
+  test "pushtag at end of file with no following dated entries" do
+    text = """
+    2026-01-01 open Assets:Bank USD
+
+    pushtag #trip
+    """
+
+    {:ok, directives} = Beancount.parse_text(text)
+    ordered = DirectiveSort.order(directives)
+
+    assert [%Beancount.Directives.Open{} | _] = ordered
+    assert List.last(ordered) == %Beancount.Directives.PushTag{tag: "trip"}
+  end
+
+  test "poptag at end of file with no following dated entries" do
+    text = """
+    2026-01-01 open Assets:Bank USD
+
+    poptag #trip
+    """
+
+    {:ok, directives} = Beancount.parse_text(text)
+    ordered = DirectiveSort.order(directives)
+
+    assert List.last(ordered) == %Beancount.Directives.PopTag{tag: "trip"}
+  end
 end

@@ -234,6 +234,22 @@ defmodule Beancount.Engine.ElixirTest do
     assert stdout =~ "unsupported native BQL"
   end
 
+  test "query/2 returns parse errors for invalid ledger text" do
+    assert {:error, %Beancount.Result{normalized: %{errors: [_ | _]}}} =
+             NativeEngine.query("2026-01-01 open", balances_bql())
+  end
+
+  test "check_file/1 returns parse errors from invalid file content" do
+    path =
+      Path.join(System.tmp_dir!(), "elixir_engine_bad_#{System.unique_integer([:positive])}.bean")
+
+    File.write!(path, "2026-01-01 open")
+    on_exit(fn -> File.rm(path) end)
+
+    assert {:error, %Beancount.Result{normalized: %{errors: [_ | _]}}} =
+             NativeEngine.check_file(path)
+  end
+
   test "render/1 delegates to the renderer" do
     directives = Beancount.parse!(@ledger)
     assert NativeEngine.render(directives) == Beancount.render(directives)

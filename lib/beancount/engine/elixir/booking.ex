@@ -62,16 +62,7 @@ defmodule Beancount.Engine.Elixir.Booking do
 
   defp do_reduce(inventory, account, currency, reduce_units, _cost_spec, method, _posting) do
     lots = get_lots(inventory, account, currency)
-
-    if method == "STRICT" do
-      if Enum.empty?(lots) do
-        {:error, "No position matches"}
-      else
-        {:error, "Ambiguous matches for reduction without cost specification"}
-      end
-    else
-      fifo_consume(inventory, account, currency, reduce_units, order_lots(lots, method))
-    end
+    fifo_consume(inventory, account, currency, reduce_units, order_lots(lots, method))
   end
 
   defp strict_reduce(inventory, account, currency, reduce_units, cost_spec, lots, posting) do
@@ -168,8 +159,6 @@ defmodule Beancount.Engine.Elixir.Booking do
     |> Enum.with_index()
     |> Enum.filter(fn {lot, _} -> lot_matches_cost?(lot, cost_spec) end)
   end
-
-  defp lot_matches_cost?(%Lot{cost: nil}, nil), do: true
 
   defp lot_matches_cost?(%Lot{cost: lot_cost}, cost_spec) do
     Inventory.cost_specs_match?(lot_cost, cost_spec) or
