@@ -101,6 +101,17 @@ defmodule Beancount.CompareTest do
              )
   end
 
+  test "compare/3 treats uncategorized errors on one side as non-equivalent" do
+    ledger = Beancount.render(@ledger)
+
+    assert {:error, %Beancount.Property.Diff{callback: :check}} =
+             Beancount.Compare.compare(
+               Beancount.CompareTest.OtherErrorA,
+               Beancount.CompareTest.CLIContextNative,
+               ledger
+             )
+  end
+
   test "compare/3 rejects different uncategorized errors" do
     ledger = Beancount.render(@ledger)
 

@@ -6,6 +6,8 @@ Run benchmarks locally (not part of CI):
 mix run bench/parser_bench.exs
 mix run bench/engine_bench.exs
 mix run bench/compiler_bench.exs
+mix run bench/query_bench.exs
+mix run bench/datalog_bench.exs
 ```
 
 `Engine.Elixir` compiles directives once via `CompiledLedger` and evaluates BQL

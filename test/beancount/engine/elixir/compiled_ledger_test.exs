@@ -37,4 +37,33 @@ defmodule Beancount.Engine.Elixir.CompiledLedgerTest do
     assert compiled.index != nil
     assert :ok = CompiledLedger.close(compiled)
   end
+
+  test "ETS and in-memory compiled ledgers return the same balances" do
+    small = CompiledLedger.compile(@ledger)
+
+    large =
+      @ledger ++
+        for index <- 1..1_001,
+            do: Beancount.open(~D[2026-01-01], "Assets:Tmp#{index}", ["USD"])
+
+    big = CompiledLedger.compile(large)
+
+    bql =
+      "SELECT account, sum(position) AS balance GROUP BY account ORDER BY account"
+
+    {:ok, small_query} = Beancount.BQL.parse(bql)
+    {:ok, small_result} = CompiledLedger.query(small, small_query)
+    {:ok, big_result} = CompiledLedger.query(big, small_query)
+
+    assert normalize_rows(small_result) == normalize_rows(big_result)
+
+    CompiledLedger.close(small)
+    CompiledLedger.close(big)
+  end
+
+  defp normalize_rows(%Beancount.Query.Result{rows: rows}) do
+    rows
+    |> Enum.map(fn row -> Enum.map(row, &String.trim/1) end)
+    |> Enum.sort()
+  end
 end

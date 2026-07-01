@@ -8,7 +8,8 @@ defmodule Beancount.BQLParityTest do
     "SELECT account, sum(position) AS balance GROUP BY account ORDER BY account",
     "SELECT account, sum(position) AS balance WHERE account ~ \"^(Assets|Liabilities|Equity)\" GROUP BY account ORDER BY account",
     "SELECT account, sum(position) AS balance WHERE account ~ \"^(Income|Expenses)\" GROUP BY account ORDER BY account",
-    "SELECT account, units(sum(position)) AS units, cost(sum(position)) AS cost WHERE account ~ \"^Assets\" GROUP BY account ORDER BY account"
+    "SELECT account, units(sum(position)) AS units, cost(sum(position)) AS cost WHERE account ~ \"^Assets\" GROUP BY account ORDER BY account",
+    "SELECT date, flag, payee, narration, position, balance WHERE account = \"Assets:Bank\" ORDER BY date"
   ]
 
   setup do

@@ -206,6 +206,24 @@ defmodule Beancount.Engine.ElixirTest do
     assert ["Assets:Stocks", "10 AAPL", "1500 USD"] in rows
   end
 
+  test "query/2 rounds holdings cost to two decimal places" do
+    text = """
+    2026-01-01 open Assets:Stocks AAPL
+    2026-01-01 open Assets:Cash USD
+
+    2026-01-02 * "Buy"
+      Assets:Stocks  3 AAPL {33.333 USD}
+      Assets:Cash  -99.999 USD
+    """
+
+    holdings_bql =
+      "SELECT account, units(sum(position)) AS units, cost(sum(position)) AS cost WHERE account ~ \"^Assets\" GROUP BY account ORDER BY account"
+
+    assert {:ok, %Beancount.Query.Result{rows: rows}} = NativeEngine.query(text, holdings_bql)
+
+    assert ["Assets:Stocks", "3 AAPL", "100 USD"] in rows
+  end
+
   test "query/2 returns parse and unsupported BQL errors" do
     assert {:error, %Beancount.Result{status: :error}} =
              NativeEngine.query("2026-01-01 open", balances_bql())

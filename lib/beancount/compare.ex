@@ -157,8 +157,6 @@ defmodule Beancount.Compare do
   # does not. When only one side has uncategorized messages, treat them as
   # equivalent if categories already match.
   defp other_errors_equivalent?([], []), do: true
-  defp other_errors_equivalent?([], _oracle), do: true
-  defp other_errors_equivalent?(_native, []), do: true
   defp other_errors_equivalent?(left, right), do: left == right
 
   defp equivalent_query?(%QueryResult{} = left, %QueryResult{} = right) do
@@ -230,6 +228,13 @@ defmodule Beancount.Compare do
           Decimal.add(existing, Decimal.new(number))
         end)
 
+      [_, number, commodity] ->
+        key = {commodity, ""}
+
+        Map.update(acc, key, Decimal.new(number), fn existing ->
+          Decimal.add(existing, Decimal.new(number))
+        end)
+
       _ ->
         Map.put(acc, {segment, :unique}, Decimal.new(1))
     end
@@ -280,17 +285,24 @@ defmodule Beancount.Compare do
   defp normalize_decimal_string(cell) do
     case Regex.run(~r/^(-?\d+(?:\.\d+)?)\s+(\S+)(?:\s+(\{.+?\}))?$/, cell) do
       [_, number, commodity, cost] ->
-        normalized =
-          number |> Decimal.new() |> Decimal.normalize() |> Decimal.to_string(:normal)
+        format_normalized_position(number, commodity, cost)
 
-        if is_binary(cost) and cost != "" do
-          normalized <> " " <> commodity <> " " <> normalize_cost_suffix(cost)
-        else
-          normalized <> " " <> commodity
-        end
+      [_, number, commodity] ->
+        format_normalized_position(number, commodity, nil)
 
       _ ->
         cell
+    end
+  end
+
+  defp format_normalized_position(number, commodity, cost) do
+    normalized =
+      number |> Decimal.new() |> Decimal.normalize() |> Decimal.to_string(:normal)
+
+    if is_binary(cost) and cost != "" do
+      normalized <> " " <> commodity <> " " <> normalize_cost_suffix(cost)
+    else
+      normalized <> " " <> commodity
     end
   end
 

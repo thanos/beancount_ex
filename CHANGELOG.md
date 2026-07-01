@@ -12,8 +12,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Native `Ledger` now processes dated directives in Beancount date order
   (`entry_sortkey`) instead of source-file order, closing the `balance_failed`
   gap on vendored `example.beancount`.
-- `Compare` normalizes position cells by merging lots at the same cost and
-  trimming zero balances when comparing query output.
+- `DirectiveSort` interleaves `pushtag`/`poptag` at source-file positions while
+  sorting dated entries chronologically.
+- `Compare` normalizes position cells by merging lots at the same cost,
+  trimming zero balances, and normalizing plain commodity amounts (e.g.
+  `-53000.00 IRAUSD` vs `-53000 IRAUSD`).
+- `Compare` no longer treats one-sided uncategorized errors as equivalent (M-2).
+- `compare/3` on vendored `example.beancount` is equivalent (M-1).
+- Holdings `cost()` output rounds to two decimal places, matching `bean-query`.
 
 ## [0.5.0] - 2026-06-30
 

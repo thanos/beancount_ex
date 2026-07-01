@@ -120,7 +120,7 @@ defmodule Beancount.Engine.Elixir.QueryEngine do
          [
            account,
            format_decimal(units) <> " " <> unit_currency,
-           format_decimal(cost) <> " " <> cost_currency
+           format_cost_decimal(cost) <> " " <> cost_currency
          ]}
       end)
       |> Map.new()
@@ -274,6 +274,11 @@ defmodule Beancount.Engine.Elixir.QueryEngine do
   defp format_balance(%Decimal{} = balance, _), do: format_decimal(balance)
 
   defp format_decimal(%Decimal{} = decimal), do: Decimal.to_string(decimal, :normal)
+
+  # bean-query rounds cost basis to two decimal places for display.
+  defp format_cost_decimal(%Decimal{} = decimal) do
+    decimal |> Decimal.round(2) |> Decimal.normalize() |> Decimal.to_string(:normal)
+  end
 
   defp column_name(%Column{as: alias}) when is_binary(alias), do: alias
 

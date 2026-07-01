@@ -20,36 +20,43 @@ defmodule Beancount.Engine.Elixir.DirectiveSort do
     Close => 2
   }
 
-  @undated_types MapSet.new([Option, Include, Plugin, PushTag, PopTag])
+  @config_undated MapSet.new([Option, Include, Plugin])
+  @positional_undated MapSet.new([PushTag, PopTag])
 
   @doc """
   Order directives for ledger processing.
 
-  Undated directives (`option`, `include`, `plugin`, `pushtag`, `poptag`) stay in
-  source-file order and run before dated entries. Dated entries are sorted by
-  Beancount's `entry_sortkey`: date, directive-type priority, then line number.
+  Configuration directives (`option`, `include`, `plugin`) run first in file order.
+  `pushtag` / `poptag` keep their source-file positions relative to dated entries.
+  Remaining dated directives sort by Beancount's `entry_sortkey`: date, directive
+  type, then file index.
 
   Uses ISO8601 date strings in the sort key because `%Date{}` does not implement
   correct `<=` ordering in Elixir.
   """
   @spec order([Beancount.Directive.t()]) :: [Beancount.Directive.t()]
   def order(directives) when is_list(directives) do
-    {undated, _dated} = Enum.split_with(directives, &undated?/1)
+    indexed = Enum.with_index(directives)
+
+    {config, rest} =
+      Enum.split_with(indexed, fn {directive, _index} -> config_undated?(directive) end)
+
+    {positional, dated} =
+      Enum.split_with(rest, fn {directive, _index} -> positional_undated?(directive) end)
 
     dated_sorted =
-      directives
-      |> Enum.with_index()
-      |> Enum.reject(fn {directive, _index} -> undated?(directive) end)
-      |> Enum.sort_by(&sort_key/1)
-      |> Enum.map(&elem(&1, 0))
+      dated
+      |> Enum.sort_by(fn {directive, index} -> dated_sort_key(directive, index) end)
 
-    undated ++ dated_sorted
+    config
+    |> Enum.map(&elem(&1, 0))
+    |> Kernel.++(merge_by_file_index(positional, dated_sorted))
   end
 
-  defp undated?(%{__struct__: type}), do: MapSet.member?(@undated_types, type)
-  defp undated?(directive), do: not Map.has_key?(directive, :date)
+  defp config_undated?(%{__struct__: type}), do: MapSet.member?(@config_undated, type)
+  defp positional_undated?(%{__struct__: type}), do: MapSet.member?(@positional_undated, type)
 
-  defp sort_key({directive, index}) do
+  defp dated_sort_key(directive, index) do
     line = Map.get(directive, :line, index + 1)
 
     {
@@ -57,5 +64,16 @@ defmodule Beancount.Engine.Elixir.DirectiveSort do
       Map.get(@sort_order, directive.__struct__, 0),
       line
     }
+  end
+
+  defp merge_by_file_index([], dated), do: Enum.map(dated, &elem(&1, 0))
+
+  defp merge_by_file_index(positional, []), do: Enum.map(positional, &elem(&1, 0))
+
+  defp merge_by_file_index([{directive, index} | positional_rest], dated) do
+    {before, after_list} = Enum.split_while(dated, fn {_, dated_index} -> dated_index < index end)
+
+    Enum.map(before, &elem(&1, 0)) ++
+      [directive | merge_by_file_index(positional_rest, after_list)]
   end
 end

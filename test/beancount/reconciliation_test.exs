@@ -58,6 +58,20 @@ defmodule Beancount.ReconciliationTest do
   @tag :integration
   @tag :beancount
   @tag :reconciliation
+  test "example.beancount compare/3 is equivalent" do
+    original = File.read!(@fixture)
+
+    assert {:ok, :equivalent} =
+             Beancount.Compare.compare(
+               Beancount.Engine.CLI,
+               Beancount.Engine.Elixir,
+               original
+             )
+  end
+
+  @tag :integration
+  @tag :beancount
+  @tag :reconciliation
   test "example.beancount native check matches CLI" do
     original = File.read!(@fixture)
 
