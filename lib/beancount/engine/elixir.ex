@@ -2,7 +2,7 @@ defmodule Beancount.Engine.Elixir do
   @moduledoc """
   Native Elixir engine: parse, render, booking-aware check, and canned reports.
 
-  v0.4 provides full parity with the CLI oracle on the 29 golden fixtures via
+  v0.4 provides full parity with the CLI oracle on the 30 golden fixtures via
   `Beancount.Compare.compare/3` (booking, balance assertions, pad resolution,
   tolerance inference, and canned reports).
   """

@@ -1,0 +1,94 @@
+# Parsing and validation
+
+Parse `.bean` text, round-trip through the renderer, and validate with the
+native engine.
+
+```elixir
+Mix.install([
+  {:beancount_ex, "~> 0.4"},
+  {:kino, "~> 0.13"}
+])
+
+Application.put_env(:beancount_ex, :engine, Beancount.Engine.Elixir)
+```
+
+## Sample text
+
+```elixir
+bean = """
+option "title" "Demo"
+
+2026-01-01 open Assets:Bank USD
+2026-01-01 open Income:Salary USD
+2026-01-01 open Equity:Opening USD
+
+2026-01-31 * "Employer" "Salary"
+  Assets:Bank     5000 USD
+  Income:Salary  -5000 USD
+"""
+```
+
+## Parse
+
+```elixir
+{:ok, directives} = Beancount.parse_text(bean)
+length(directives)
+```
+
+## Render round-trip
+
+```elixir
+regenerated = Beancount.render(directives)
+regenerated == bean
+```
+
+## Check with native engine
+
+```elixir
+case Beancount.check_text(bean) do
+  {:ok, result} -> result.status
+  {:error, result} -> result.normalized.errors
+end
+```
+
+## Deliberately broken ledger
+
+```elixir
+broken = """
+2026-01-01 open Assets:Bank USD
+2026-01-01 open Income:Salary USD
+
+2026-01-31 * "Employer" "Salary"
+  Assets:Bank     5000 USD
+  Income:Salary  -4000 USD
+"""
+
+{:error, result} = Beancount.check_text(broken)
+result.normalized.errors
+```
+
+## Parse a file
+
+```elixir
+path = Path.join(System.tmp_dir!(), "demo.bean")
+File.write!(path, bean)
+
+{:ok, from_file} = Beancount.parse_file(path)
+Beancount.render(from_file)
+```
+
+## Build in Elixir, export for Beancount tools
+
+```elixir
+ledger = [
+  Beancount.option("title", "Exported"),
+  Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"]),
+  Beancount.transaction(~D[2026-01-31], "*", "Employer", "Salary", [
+    Beancount.posting("Assets:Bank", Decimal.new("100"), "USD"),
+    Beancount.posting("Income:Salary", Decimal.new("-100"), "USD")
+  ])
+]
+
+exported = Beancount.render(ledger)
+IO.puts(exported)
+```

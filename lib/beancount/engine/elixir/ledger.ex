@@ -46,19 +46,9 @@ defmodule Beancount.Engine.Elixir.Ledger do
   def process(%__MODULE__{} = ledger, directives) do
     ledger = index_accounts(ledger, directives)
 
-    directives
-    |> Enum.with_index()
-    |> Enum.sort_by(&directive_sort_key/1)
-    |> Enum.reduce(ledger, fn {directive, _index}, ledger ->
+    Enum.reduce(Enum.with_index(directives), ledger, fn {directive, _index}, ledger ->
       apply_directive(directive, ledger)
     end)
-  end
-
-  defp directive_sort_key({directive, index}) do
-    case directive do
-      %{date: %Date{} = date} -> {1, date, index}
-      _ -> {0, Date.new!(1900, 1, 1), index}
-    end
   end
 
   defp index_accounts(ledger, directives) do

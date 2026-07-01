@@ -8,7 +8,7 @@ golden_beans =
 example = "test/fixtures/external/beancount/example.beancount"
 
 inputs = %{
-  "golden fixtures (29)" => fn -> Enum.each(golden_beans, &Beancount.parse_text/1) end,
+  "golden fixtures (30)" => fn -> Enum.each(golden_beans, &Beancount.parse_text/1) end,
   "example.beancount" => fn -> Beancount.parse_text(File.read!(example)) end
 }
 

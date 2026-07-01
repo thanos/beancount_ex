@@ -31,7 +31,8 @@ defmodule Beancount.Engine.Elixir.Tolerance do
       if places == 0 do
         Decimal.new("0.5")
       else
-        scale = :math.pow(10, -places) |> Decimal.from_float()
+        divisor = Decimal.new("1" <> String.duplicate("0", places))
+        scale = Decimal.div(Decimal.new(1), divisor)
         Decimal.mult(Decimal.new("0.5"), scale)
       end
     end)

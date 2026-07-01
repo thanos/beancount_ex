@@ -28,7 +28,7 @@ Full native booking parity, reconciliation harness, and performance benchmarks.
 
 ### Changed
 
-- All 29 golden fixtures pass `compare/3` as `{:ok, :equivalent}`.
+- All 30 golden fixtures pass `compare/3` as `{:ok, :equivalent}`.
 - `Ledger` processes directives in date order with point-in-time open/close checks.
 - `compare/3` skips canned queries when both engines agree on equivalent check
   errors; no more `:deferred` return value.

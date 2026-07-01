@@ -90,6 +90,28 @@ defmodule Beancount.CompareTest do
     assert message =~ "check"
   end
 
+  test "compare/3 rejects different uncategorized errors" do
+    ledger = Beancount.render(@ledger)
+
+    assert {:error, %Beancount.Property.Diff{callback: :check}} =
+             Beancount.Compare.compare(
+               Beancount.CompareTest.OtherErrorA,
+               Beancount.CompareTest.OtherErrorB,
+               ledger
+             )
+  end
+
+  test "compare/3 treats booking insufficient errors as equivalent" do
+    assert {:ok, :equivalent} =
+             Beancount.Compare.compare(
+               Beancount.CompareTest.BookingInsufficientCLI,
+               Beancount.CompareTest.BookingInsufficientNative,
+               Beancount.Golden.render(
+                 Path.join(Beancount.Golden.root(), "booking_spec_too_small")
+               )
+             )
+  end
+
   test "compare/3 reports query failures from an engine" do
     assert {:error, %Beancount.Property.Diff{callback: :query, message: "query failed"}} =
              Beancount.Compare.compare(
@@ -120,5 +142,105 @@ defmodule Beancount.CompareTest do
 
     assert {:error, %Beancount.Result{status: :error}} =
              Beancount.BrokenQueryEngine.query("ledger", "SELECT account")
+  end
+end
+
+defmodule Beancount.CompareTest.OtherErrorA do
+  @behaviour Beancount.Engine
+
+  @impl true
+  def render(_directives), do: ""
+
+  @impl true
+  def check(_text), do: other_error("alpha unknown failure")
+
+  @impl true
+  def check_file(_path), do: check("")
+
+  @impl true
+  def query(_text, _bql),
+    do: {:ok, %Beancount.Query.Result{columns: [], rows: [], raw: "", status: :ok}}
+
+  defp other_error(message) do
+    {:error,
+     %Beancount.Result{
+       status: :error,
+       normalized: %{status: :error, errors: [%{line: nil, message: message}]}
+     }}
+  end
+end
+
+defmodule Beancount.CompareTest.OtherErrorB do
+  @behaviour Beancount.Engine
+
+  @impl true
+  def render(_directives), do: ""
+
+  @impl true
+  def check(_text), do: other_error("beta unknown failure")
+
+  @impl true
+  def check_file(_path), do: check("")
+
+  @impl true
+  def query(_text, _bql),
+    do: {:ok, %Beancount.Query.Result{columns: [], rows: [], raw: "", status: :ok}}
+
+  defp other_error(message) do
+    {:error,
+     %Beancount.Result{
+       status: :error,
+       normalized: %{status: :error, errors: [%{line: nil, message: message}]}
+     }}
+  end
+end
+
+defmodule Beancount.CompareTest.BookingInsufficientCLI do
+  @behaviour Beancount.Engine
+
+  @impl true
+  def render(_directives), do: ""
+
+  @impl true
+  def check(_text), do: booking_error("Not enough lots to reduce")
+
+  @impl true
+  def check_file(_path), do: check("")
+
+  @impl true
+  def query(_text, _bql),
+    do: {:ok, %Beancount.Query.Result{columns: [], rows: [], raw: "", status: :ok}}
+
+  defp booking_error(message) do
+    {:error,
+     %Beancount.Result{
+       status: :error,
+       normalized: %{status: :error, errors: [%{line: 1, message: message}]}
+     }}
+  end
+end
+
+defmodule Beancount.CompareTest.BookingInsufficientNative do
+  @behaviour Beancount.Engine
+
+  @impl true
+  def render(_directives), do: ""
+
+  @impl true
+  def check(_text), do: booking_error("Insufficient units for reduction")
+
+  @impl true
+  def check_file(_path), do: check("")
+
+  @impl true
+  def query(_text, _bql),
+    do: {:ok, %Beancount.Query.Result{columns: [], rows: [], raw: "", status: :ok}}
+
+  defp booking_error(message) do
+    {:error,
+     %Beancount.Result{
+       status: :error,
+       normalized: %{status: :error, errors: [%{line: 1, message: message}]}
+     }}
   end
 end

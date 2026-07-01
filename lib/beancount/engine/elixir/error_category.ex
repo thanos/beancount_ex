@@ -23,6 +23,7 @@ defmodule Beancount.Engine.Elixir.ErrorCategory do
       {:unbalanced, &unbalanced?/1},
       {:booking_no_match, &booking_no_match?/1},
       {:booking_ambiguous, &booking_ambiguous?/1},
+      {:booking_insufficient, &booking_insufficient?/1},
       {:include_not_found, &include_error?/1},
       {:invalid_option, &option_error?/1}
     ]
@@ -66,6 +67,11 @@ defmodule Beancount.Engine.Elixir.ErrorCategory do
 
   defp booking_ambiguous?(msg),
     do: String.contains?(msg, "Ambiguous matches")
+
+  defp booking_insufficient?(msg),
+    do:
+      String.contains?(msg, "Not enough lots") or
+        String.contains?(msg, "Insufficient units")
 
   defp include_error?(msg),
     do: String.contains?(msg, "does not match any files")

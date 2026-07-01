@@ -56,6 +56,23 @@ defmodule Beancount.ReconciliationTest do
   @tag :integration
   @tag :beancount
   @tag :reconciliation
+  test "example.beancount compare/3 returns a structured result" do
+    original = File.read!(@fixture)
+
+    result =
+      Beancount.Compare.compare(
+        Beancount.Engine.CLI,
+        Beancount.Engine.Elixir,
+        original
+      )
+
+    assert match?({:ok, :equivalent}, result) or
+             match?({:error, %Beancount.Property.Diff{}}, result)
+  end
+
+  @tag :integration
+  @tag :beancount
+  @tag :reconciliation
   @tag :reconciliation_compare
   @tag :skip
   test "example.beancount native engine agrees with CLI oracle" do

@@ -138,14 +138,18 @@ defmodule Beancount.Compare do
   end
 
   defp normalize_check(%Result{normalized: %{status: status, errors: errors}}) do
+    {categories, other_messages} =
+      Enum.map_reduce(errors, [], fn error, others ->
+        case ErrorCategory.categorize(error) do
+          :other -> {nil, [error.message | others]}
+          category -> {category, others}
+        end
+      end)
+
     %{
       status: status,
-      error_categories:
-        errors
-        |> Enum.map(&ErrorCategory.categorize/1)
-        |> Enum.reject(&(&1 == :other))
-        |> Enum.uniq()
-        |> Enum.sort()
+      error_categories: categories |> Enum.reject(&is_nil/1) |> Enum.uniq() |> Enum.sort(),
+      other_errors: other_messages |> Enum.sort()
     }
   end
 

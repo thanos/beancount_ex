@@ -2,10 +2,12 @@
 
 ```elixir
 Mix.install([
-  {:beancount_ex, "~> 0.2"},
-  {:explorer, "~> 0.9"},
+  {:beancount_ex, "~> 0.4"},
+  {:explorer, "~> 0.11"},
   {:kino, "~> 0.13"}
 ])
+
+Application.put_env(:beancount_ex, :engine, Beancount.Engine.Elixir)
 ```
 
 ## A sample ledger
@@ -15,6 +17,7 @@ ledger = [
   Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"]),
   Beancount.open(~D[2026-01-01], "Income:Salary", ["USD"]),
   Beancount.open(~D[2026-01-01], "Expenses:Rent", ["USD"]),
+  Beancount.open(~D[2026-01-01], "Equity:Opening", ["USD"]),
   Beancount.transaction(~D[2026-01-31], "*", "Employer", "Salary", [
     Beancount.posting("Assets:Bank", Decimal.new("5000"), "USD"),
     Beancount.posting("Income:Salary", Decimal.new("-5000"), "USD")
@@ -28,23 +31,53 @@ ledger = [
 
 ## Balances as a DataFrame
 
-`Beancount.balances/1` returns a `Beancount.Query.Result`; the optional Explorer
-bridge converts it into a `DataFrame`, which Livebook renders as an interactive
-table. (Requires the Beancount `bean-query` tool installed.)
+`Beancount.balances/1` returns a `Beancount.Query.Result`. Explorer converts it
+to a `DataFrame`, which Livebook renders as an interactive table.
 
 ```elixir
 {:ok, result} = Beancount.balances(ledger)
 Beancount.Explorer.to_dataframe(result)
 ```
 
-## Income statement
+## Balance sheet and income statement
+
+```elixir
+{:ok, result} = Beancount.balance_sheet(ledger)
+Beancount.Explorer.to_dataframe(result)
+```
 
 ```elixir
 {:ok, result} = Beancount.income_statement(ledger)
 Beancount.Explorer.to_dataframe(result)
 ```
 
-## A custom BQL query
+## Holdings (investments)
+
+```elixir
+investment_ledger = [
+  Beancount.open(~D[2026-01-01], "Assets:Stocks", ["AAPL"], booking: "FIFO"),
+  Beancount.open(~D[2026-01-01], "Assets:Cash", ["USD"]),
+  Beancount.open(~D[2026-01-01], "Equity:Opening", ["USD"]),
+  Beancount.transaction(~D[2026-01-02], "*", "Broker", "Buy", [
+    Beancount.posting("Assets:Stocks", Decimal.new("10"), "AAPL",
+      cost: %{amount: Decimal.new("150"), currency: "USD"}
+    ),
+    Beancount.posting("Assets:Cash", Decimal.new("-1500"), "USD")
+  ])
+]
+
+{:ok, result} = Beancount.holdings(investment_ledger)
+Beancount.Explorer.to_dataframe(result)
+```
+
+## Journal for one account
+
+```elixir
+{:ok, result} = Beancount.journal(ledger, "Assets:Bank")
+Beancount.Explorer.to_dataframe(result)
+```
+
+## Custom BQL query
 
 ```elixir
 {:ok, result} =
@@ -53,10 +86,7 @@ Beancount.Explorer.to_dataframe(result)
 Beancount.Explorer.to_dataframe(result)
 ```
 
-## Render with Kino explicitly
-
-A DataFrame returned as the last value renders automatically, but you can also
-build a table widget yourself:
+## Kino DataTable (no Explorer)
 
 ```elixir
 {:ok, result} = Beancount.balances(ledger)
