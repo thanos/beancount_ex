@@ -6,7 +6,7 @@
 [![Hex.pm Version](https://img.shields.io/hexpm/v/beancount_ex.svg)](https://hex.pm/packages/beancount_ex)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/beancount_ex)
 [![Hex.pm License](https://img.shields.io/hexpm/l/beancount_ex.svg)](https://hex.pm/packages/beancount_ex)
-[![CI](https://github.com/thanos/beancount_exactions/workflows/ci.yml/badge.svg)](https://github.com/thanos/beancount_exactions/workflows/ci.yml)
+[![CI](https://github.com/thanos/beancount_ex/actions/workflows/ci.yml/badge.svg)](https://github.com/thanos/beancount_ex/actions/workflows/ci.yml)
 [![Coverage](https://coveralls.io/repos/github/thanos/beancount_ex/badge.svg?branch=main)](https://coveralls.io/github/thanos/beancount_ex)
 
 
