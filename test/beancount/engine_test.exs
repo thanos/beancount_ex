@@ -4,11 +4,7 @@ defmodule Beancount.EngineTest do
   alias Beancount.Engine
 
   setup do
-    unless Process.whereis(Beancount.FakeEngine) do
-      {:ok, _} = Beancount.FakeEngine.start_link()
-    end
-
-    Beancount.FakeEngine.reset!()
+    Beancount.FakeEngine.ensure!()
     :ok
   end
 

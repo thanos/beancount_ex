@@ -1,4 +1,6 @@
-Mix.install([{:benchee, "~> 1.3"}])
+# Engine check/1 on golden fixtures and example.beancount.
+#
+# Run: mix run bench/engine_bench.exs
 
 golden_beans =
   "test/fixtures/golden"

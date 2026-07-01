@@ -1,4 +1,6 @@
-Mix.install([{:benchee, "~> 1.3"}])
+# Compile-once vs re-process query paths on example.beancount.
+#
+# Run: mix run bench/compiler_bench.exs
 
 example = File.read!("test/fixtures/external/beancount/example.beancount")
 {:ok, directives} = Beancount.parse_text(example)

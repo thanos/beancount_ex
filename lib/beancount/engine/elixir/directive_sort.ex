@@ -20,8 +20,8 @@ defmodule Beancount.Engine.Elixir.DirectiveSort do
     Close => 2
   }
 
-  @config_undated MapSet.new([Option, Include, Plugin])
-  @positional_undated MapSet.new([PushTag, PopTag])
+  @config_undated_modules [Option, Include, Plugin]
+  @positional_undated_modules [PushTag, PopTag]
 
   @doc """
   Order directives for ledger processing.
@@ -53,8 +53,17 @@ defmodule Beancount.Engine.Elixir.DirectiveSort do
     |> Kernel.++(merge_by_file_index(positional, dated_sorted))
   end
 
-  defp config_undated?(%{__struct__: type}), do: MapSet.member?(@config_undated, type)
-  defp positional_undated?(%{__struct__: type}), do: MapSet.member?(@positional_undated, type)
+  defp config_undated?(%{__struct__: type})
+       when type in @config_undated_modules,
+       do: true
+
+  defp config_undated?(_), do: false
+
+  defp positional_undated?(%{__struct__: type})
+       when type in @positional_undated_modules,
+       do: true
+
+  defp positional_undated?(_), do: false
 
   defp dated_sort_key(directive, index) do
     line = Map.get(directive, :line, index + 1)

@@ -57,7 +57,8 @@ defmodule Beancount.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
-      {:ex_doc, "~> 0.34", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false},
+      {:benchee, "~> 1.3", only: :dev}
     ]
   end
 

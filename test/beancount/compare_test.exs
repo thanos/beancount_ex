@@ -2,19 +2,7 @@ defmodule Beancount.CompareTest do
   use ExUnit.Case, async: false
 
   setup do
-    case Beancount.FakeEngine.start_link() do
-      {:ok, _} -> :ok
-      {:error, {:already_started, _}} -> :ok
-    end
-
-    try do
-      Beancount.FakeEngine.reset!()
-    catch
-      :exit, _ ->
-        {:ok, _} = Beancount.FakeEngine.start_link()
-        Beancount.FakeEngine.reset!()
-    end
-
+    Beancount.FakeEngine.ensure!()
     :ok
   end
 
