@@ -5,9 +5,9 @@ defmodule Beancount do
   `beancount_ex` is **not** a General Ledger. It is a compatibility layer and
   *behavioral oracle*: it constructs Beancount directives as typed Elixir
   structs, renders them to deterministic `.bean` text, and validates them
-  through a configurable engine. Today that engine wraps real Beancount; a
-  future native Elixir (or Rust) engine can replace it **without changing this
-  public API**.
+  through a configurable engine. The default engine wraps real Beancount
+  (`bean-check` / `bean-query`); the native `Beancount.Engine.Elixir` can
+  replace it **without changing this public API**.
 
   ## Quick start
 
@@ -524,7 +524,7 @@ defmodule Beancount do
 
   ## Examples
 
-  With the native engine (no `bean-check` required):
+  With the configured engine:
 
       ledger = [
         Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"]),
@@ -535,8 +535,7 @@ defmodule Beancount do
         ])
       ]
 
-      {:ok, %Beancount.Result{status: :ok}} =
-        ledger |> Beancount.render() |> Beancount.Engine.Elixir.check()
+      {:ok, %Beancount.Result{status: :ok}} = Beancount.check(ledger)
 
   """
   @spec check([directive()]) :: {:ok, Beancount.Result.t()} | {:error, Beancount.Result.t()}

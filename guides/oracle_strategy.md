@@ -1,14 +1,15 @@
 # Oracle Strategy
 
-The long-term purpose of `beancount_ex` is to be a **behavioral oracle** for a
-future native Elixir General Ledger.
+`beancount_ex` is the **behavioral oracle** for the native Elixir engine.
+It wraps real Beancount behind a stable Elixir API; the native engine
+validates against it.
 
 ## What is an oracle?
 
 In testing, an *oracle* is a trusted reference that tells you what the correct
 answer should be. Beancount is a mature, widely used, double-entry accounting
 engine. By wrapping it behind a stable Elixir API, we get a reference
-implementation whose behavior we can compare against.
+implementation whose behavior the native engine can be compared against.
 
 ## Why Beancount?
 
@@ -22,24 +23,31 @@ can be validated against Beancount's observable behavior.
 ## The plan
 
 ```
-v0.1  Beancount  ->  Engine.CLI     ->  Real Beancount      (default)
-v0.3  Beancount  ->  Engine.Elixir  ->  Parser + structural check/query
-v0.4  Beancount  ->  Engine.Elixir  ->  Full booking parity (golden fixtures)
-v0.5  Beancount  ->  Engine.Elixir  ->  Native BQL + directive compiler
-v0.6  Beancount  ->  Engine.Rust    ->  Native, fast        (future)
+v0.6  beancount_ex  =  Ecto storage + native engine + canned reports
+                     - SQLite (:memory:) and file backends
+                     - Booking, balance assertions, pad resolution
+                     - Ecto.Query for ad-hoc queries
+                     - Golden fixture parity via Compare.compare/3
+
+v0.7  beancount_ex  =  BQL gap closure + Postgres/Mnesia backends
+                     - Full BQL surface (functions, filters, JOINs)
+                     - Storage backends: PostgreSQL (Ecto), Mnesia
+                     - Plugin semantics, price database
+
+v1.0  beancount_ex  =  Stable oracle + optional split
+                     - Engine behaviour as the stable seam
+                     - Optional extraction of native engine to separate package
 ```
 
-At every step the public `Beancount.*` API stays identical. Applications built
-on v0.1 keep working unchanged when the engine is swapped.
+At every step the public `Beancount.*` API stays identical.
 
 ## How equivalence is checked
 
 1. Generate valid ledgers with `Beancount.Property` (StreamData).
-2. Run the same input through the oracle (`Engine.CLI`) and the candidate
-   native engine (`Engine.Elixir`).
-3. Compare the **normalized** results from `check/1` and the canned report
-   queries via `Beancount.Compare.compare/3` (also exposed as
-   `Beancount.Property.compare/3` in test/dev).
+2. Run the same input through the oracle (`Engine.CLI`) and the native
+   engine (`Engine.Elixir`).
+3. Compare the normalized results from `check/1` and canned report queries
+   via `Beancount.Compare.compare/3`.
 
 ```elixir
 {:ok, :equivalent} =
@@ -49,18 +57,17 @@ on v0.1 keep working unchanged when the engine is swapped.
 On mismatch, `Beancount.Property.Diff` describes which callback diverged and
 the normalized oracle vs native payloads.
 
-### v0.4 parity contract
+### Parity contract
 
 Equivalence is asserted for:
 
-- structural `check/1` results by normalized error category (plus uncategorized
-  error messages when both engines reject a ledger)
+- structural `check/1` results by normalized error category
 - canned reports: `balances`, `balance_sheet`, `income_statement`, `holdings`
 - full booking semantics (FIFO, LIFO, STRICT, AVERAGE, NONE), balance
   assertions, pad resolution, and tolerance inference on the golden fixtures
 
 Golden fixtures exercise booking and validation edge cases against the CLI
-oracle via `Beancount.Compare.compare/3`.
+oracle.
 
 Combined with golden files (deterministic, committed reference output) and
 property tests (broad, generated coverage), this gives two complementary safety

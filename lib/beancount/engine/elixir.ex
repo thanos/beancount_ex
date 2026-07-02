@@ -1,10 +1,9 @@
 defmodule Beancount.Engine.Elixir do
   @moduledoc """
-  Native Elixir engine: parse, render, booking-aware check, and native BQL queries.
+  Native Elixir engine: parse, render, booking-aware check, and canned reports.
 
-  v0.5 evaluates arbitrary BQL via `Beancount.BQL` and the directive compiler
-  (`CompiledLedger`). Full parity with the CLI oracle is asserted on the golden
-  fixtures via `Beancount.Compare.compare/3`.
+  Full parity with the CLI oracle is asserted on the golden fixtures via
+  `Beancount.Compare.compare/3`.
   """
 
   @behaviour Beancount.Engine
@@ -84,7 +83,7 @@ defmodule Beancount.Engine.Elixir do
   end
 
   @doc """
-  Parse the ledger and run a BQL query with the native query engine.
+  Parse the ledger and run a canned report query.
 
   ## Examples
 

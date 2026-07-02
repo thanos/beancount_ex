@@ -54,10 +54,13 @@ jobs:
       - name: Compile (warnings as errors)
         run: mix compile --warnings-as-errors
 
+      - name: Check for unused deps
+        run: mix deps.unlock --check-unused
+
       - name: Credo
         run: mix credo --strict
 
-      - name: Tests (unit + property + golden)
+      - name: Tests (unit + property + golden + storage)
         run: mix test
 
   coverage:
@@ -147,7 +150,7 @@ jobs:
         run: mix deps.get
 
       - name: Build docs
-        run: mix docs
+        run: mix docs --warnings-as-errors
 
   integration:
     name: Integration (real Beancount, optional)
@@ -186,6 +189,8 @@ jobs:
     name: Benchmarks (optional)
     runs-on: ubuntu-latest
     continue-on-error: true
+    env:
+      MIX_ENV: dev
     steps:
       - uses: actions/checkout@v4
 
@@ -198,11 +203,8 @@ jobs:
       - name: Install dependencies
         run: mix deps.get
 
-      - name: Run compiler benchmark
-        run: mix run bench/compiler_bench.exs
+      - name: Run parser benchmark
+        run: mix run bench/parser_bench.exs
 
-      - name: Run query benchmark
-        run: mix run bench/query_bench.exs
-
-      - name: Run datalog benchmark
-        run: mix run bench/datalog_bench.exs
+      - name: Run engine benchmark
+        run: mix run bench/engine_bench.exs

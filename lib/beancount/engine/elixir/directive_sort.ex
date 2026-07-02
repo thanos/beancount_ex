@@ -79,10 +79,26 @@ defmodule Beancount.Engine.Elixir.DirectiveSort do
 
   defp merge_by_file_index(positional, []), do: Enum.map(positional, &elem(&1, 0))
 
-  defp merge_by_file_index([{directive, index} | positional_rest], dated) do
-    {before, after_list} = Enum.split_while(dated, fn {_, dated_index} -> dated_index < index end)
+  defp merge_by_file_index(positional, dated) do
+    # Single-pass merge: both lists are in file-index order.
+    # Positional directives interleave at their source-file positions.
+    merge_loop(positional, dated, [])
+  end
 
-    Enum.map(before, &elem(&1, 0)) ++
-      [directive | merge_by_file_index(positional_rest, after_list)]
+  defp merge_loop([], dated, acc), do: acc ++ Enum.map(dated, &elem(&1, 0))
+
+  defp merge_loop([{pos, _pos_idx} | pos_rest], [], acc),
+    do: merge_loop(pos_rest, [], acc ++ [pos])
+
+  defp merge_loop(
+         [{pos, pos_idx} | pos_rest] = positional,
+         [{_dated, dated_idx} | dated_rest] = dated,
+         acc
+       ) do
+    if pos_idx < dated_idx do
+      merge_loop(pos_rest, dated, acc ++ [pos])
+    else
+      merge_loop(positional, dated_rest, acc ++ [elem(hd(dated), 0)])
+    end
   end
 end

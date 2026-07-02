@@ -42,6 +42,6 @@ The suite verifies the core invariants:
 
 ## Future: oracle comparison
 
-v0.3 will add an internal helper in `Beancount.Property` for asserting that a
+An internal helper was added in `Beancount.Property` for asserting that a
 native engine produces equivalent normalized results to the Beancount oracle
-for identical inputs. See [Oracle Strategy](oracle_strategy.md).
+for identical inputs. See [Oracle Strategy](oracle_strategy.md) and `Beancount.Compare.compare/3`.

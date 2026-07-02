@@ -184,4 +184,26 @@ defmodule Beancount.Engine.Elixir.LedgerTest do
     ledger = Ledger.process(Ledger.new(), directives)
     refute Enum.any?(Ledger.errors(ledger), fn %{message: msg} -> msg =~ "does not balance" end)
   end
+
+  test "process/2 handles pad with cost-basis inventory accounts" do
+    directives = [
+      Beancount.open(~D[2026-01-01], "Assets:Stocks", ["AAPL"], booking: "FIFO"),
+      Beancount.open(~D[2026-01-01], "Equity:Opening", ["USD"]),
+      Beancount.transaction(~D[2026-01-02], "*", nil, "Buy", [
+        Beancount.posting("Assets:Stocks", Decimal.new("10"), "AAPL",
+          cost: %Beancount.CostSpec{per_amount: Decimal.new("150"), per_currency: "USD"}
+        ),
+        Beancount.posting("Equity:Opening", Decimal.new("-1500"), "USD")
+      ]),
+      Beancount.pad(~D[2026-01-03], "Equity:Opening", "Assets:Stocks"),
+      Beancount.balance(~D[2026-01-04], "Equity:Opening", Decimal.new("1500"), "USD")
+    ]
+
+    ledger = Ledger.process(Ledger.new(), directives)
+
+    assert Decimal.equal?(
+             Inventory.balance(ledger.inventory, "Equity:Opening", "USD"),
+             Decimal.new("1500")
+           )
+  end
 end

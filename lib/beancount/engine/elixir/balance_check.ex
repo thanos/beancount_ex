@@ -92,5 +92,5 @@ defmodule Beancount.Engine.Elixir.BalanceCheck do
     "#{format_decimal(amount)} #{currency}"
   end
 
-  defp format_decimal(%Decimal{} = d), do: Decimal.to_string(d, :normal)
+  defp format_decimal(%Decimal{} = d), do: Beancount.Renderer.format_decimal(d)
 end

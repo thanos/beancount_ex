@@ -25,7 +25,10 @@ defmodule Beancount.ReportTest do
     assert {:ok, %Result{}} = Beancount.Report.balances("2026-01-01 open Assets:Bank USD\n")
   end
 
-  test "balance_sheet/1, income_statement/1, holdings/1 dispatch successfully" do
+  test "balance_sheet/1, income_statement/1, holdings/1 return results" do
+    # These dispatch through FakeBeanQuery which returns a fixed CSV.
+    # Verify that each report returns a result (column shapes depend on the
+    # engine; the native engine is tested in elixir_test.exs and reports_test.exs).
     assert {:ok, %Result{}} = Beancount.Report.balance_sheet(@ledger)
     assert {:ok, %Result{}} = Beancount.Report.income_statement(@ledger)
     assert {:ok, %Result{}} = Beancount.Report.holdings(@ledger)

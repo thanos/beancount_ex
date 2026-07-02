@@ -1,14 +1,14 @@
 defmodule Beancount.Engine.CLI do
   @moduledoc """
-  The v0.1 engine: a thin wrapper around the real Beancount `bean-check` CLI.
+  The default engine: a thin wrapper around the Beancount `bean-check` and
+  `bean-query` CLI tools.
 
-  This is the initial behavioral oracle. Rendering is delegated to
-  `Beancount.Renderer` and checking is delegated to `Beancount.Checker`, which
-  shells out to `bean-check`.
+  This is the behavioral oracle. Rendering is delegated to
+  `Beancount.Renderer`, checking to `Beancount.Checker` (shells out to
+  `bean-check`), and queries to `Beancount.Query` (shells out to `bean-query`).
 
-  Future native engines (`Beancount.Engine.Elixir`, `Beancount.Engine.Rust`)
-  will implement the same `Beancount.Engine` behaviour and can be validated
-  against this oracle.
+  The native `Beancount.Engine.Elixir` implements the same
+  `Beancount.Engine` behaviour and is validated against this oracle.
   """
 
   @behaviour Beancount.Engine

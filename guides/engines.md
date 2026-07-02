@@ -54,30 +54,26 @@ possible.
 Because `query/2` is part of the behaviour, native engines must implement it
 too - keeping the oracle contract uniform across backends.
 
-## The Elixir engine (v0.5)
+## The Elixir engine
 
-`Beancount.Engine.Elixir` is a native engine with **golden parity** against the
-CLI oracle for check and supported BQL queries:
+`Beancount.Engine.Elixir` is a native engine with golden-fixture parity
+against the CLI oracle for check and canned reports:
 
 ```elixir
 config :beancount_ex, engine: Beancount.Engine.Elixir
 ```
 
-| Callback | v0.5 behaviour |
-|----------|----------------|
+| Callback | Behaviour |
+|----------|-----------|
 | `render/1` | delegates to `Beancount.Renderer` |
 | `check/1` | booking, balance assertions, pad resolution, tolerance inference |
-| `query/2` | native BQL via `Beancount.BQL` and `CompiledLedger` |
+| `query/2` | canned reports (balances, balance_sheet, income_statement, holdings, journal) |
 
-Supported BQL includes balances, balance sheet, income statement, holdings,
-journal queries, and `WHERE` / `GROUP BY` / `ORDER BY` with `sum(position)`,
-`units()`, and `cost()`. See `guides/query_engine.md`.
+For BQL queries beyond the canned set, use `Engine.CLI` (`bean-query`).
+For ad-hoc queries against stored directives, use `Beancount.Queries`
+(Ecto.Query). See [Queries](queries.md) and [Storage](storage.md).
 
-For BQL constructs not yet implemented natively, use `Engine.CLI` (`bean-query`)
-as the oracle.
-
-See `guides/booking.md`, `guides/directive_compiler.md`, and
-`guides/reconciliation.md`.
+See [Booking](booking.md) and [Reconciliation](reconciliation.md).
 
 `Beancount.check_file/1` routes through the configured engine. The CLI engine
 passes the file path to `bean-check` (so `include` resolves relative to the
@@ -87,11 +83,6 @@ the original path.
 
 ## Future engines
 
-The roadmap also includes:
-
-```
-Beancount.Engine.Rust     # native Rust (NIF/port)
-```
-
-Because they share the behaviour and the `Beancount.Result` shape, swapping
-engines requires **no changes** to `Beancount.*` callers.
+Additional engines (e.g. native Rust via NIF/port) can implement the same
+behaviour. Because they share the `Beancount.Result` shape, swapping engines
+requires **no changes** to `Beancount.*` callers.

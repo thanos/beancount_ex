@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-07-02
+
+Ecto storage, native queries, Datalog removal, anti-pattern fixes.
+
+### Added
+- Ecto-based storage: SQLite (`:memory:`) default, SQLite file for persistence.
+- Ecto schemas for all 18 directive types (`Beancount.Schemas.*`).
+- `Beancount.Storage` API: `store/1`, `load/0`, `clear/0`, `import_file/1`,
+  `export_file/1`.
+- `Beancount.Queries` module: Ecto.Query-based ad-hoc queries against stored
+  directives (`list_opens/1`, `find_transactions/1`, `count_by_type/0`, etc.).
+- `Beancount.Repo` with auto-migration on startup.
+- Guides: `storage.md`, `queries.md`.
+
+### Removed
+- `Beancount.BQL` (parser and AST) — BQL remains via `Engine.CLI` (bean-query).
+- `Beancount.Engine.Elixir.QueryEngine` (3-shape string dispatcher) —
+  replaced by explicit canned-query mapping in `Reports`.
+- `Beancount.Engine.Elixir.FactBase`, `Index`, `CompiledLedger` —
+  replaced by Ecto.Repo and database tables.
+- `nimble_parsec` dependency — lexer uses regex only.
+- All "Datalog" terminology and claims.
+- Guides: `query_engine.md`, `directive_compiler.md` (replaced by `queries.md`
+  and `storage.md`).
+
+### Changed
+- `Engine.Elixir.query/2` runs canned reports via the booking engine. Arbitrary
+  BQL is not supported natively; use `Engine.CLI` for BQL.
+- `Reports` module rewritten: explicit canned-query dispatch instead of BQL
+  string matching.
+- `DirectiveSort.merge_by_file_index/2` rewritten as single-pass O(n+m) merge.
+- `format_decimal/1` consolidated to use `Renderer.format_decimal/1`.
+
+### Fixed
+- H-4: `check/1` doc example fixed.
+- M-3: `cli.ex` moduledoc updated.
+- M-4: Repo URLs consolidated.
+- L-4: `FakeEngine.query/2` records calls.
+- L-5: `beancount.ex` moduledoc updated.
+- N-2: `querying.md` "future native engines" phrasing fixed.
+- AP-4: 12 inline stub modules extracted to `test/support/compare_stubs.ex`.
+- AP-5: Lexer dual regex + NimbleParsec paths consolidated to regex only.
+- AP-6: DirectiveSort O(n*m) merge replaced with O(n+m) single-pass merge.
+- AP-7: `format_decimal/1` duplication consolidated.
+- T-4: Removed self-comparison test.
+- T-5: Fixed stale "v0.3 parity contract" test name.
+- T-8: Added position-cell normalization tests.
+- T-9: Added pad + cost-basis interaction test.
+- T-11: Added shared test ledger fixtures.
+
 ### Fixed
 
 - Native `Ledger` now processes dated directives in Beancount date order
@@ -23,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.0] - 2026-06-30
 
-Native BQL parser, directive compiler, and Datalog-style query evaluation.
+Native BQL parser, directive compiler, and native query evaluation.
 
 ### Added
 

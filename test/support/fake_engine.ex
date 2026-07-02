@@ -59,6 +59,8 @@ defmodule Beancount.FakeEngine do
 
   @impl Beancount.Engine
   def query(_text, _bql) do
+    Agent.update(__MODULE__, fn calls -> [{:query, :text} | calls] end)
+
     {:ok, %Beancount.Query.Result{columns: [], rows: [], raw: "", status: :ok}}
   end
 end

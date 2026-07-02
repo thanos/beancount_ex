@@ -5,6 +5,21 @@ defmodule Beancount.Application do
 
   @impl true
   def start(_type, _args) do
-    Supervisor.start_link([], strategy: :one_for_one, name: Beancount.Supervisor)
+    children = [
+      Beancount.Repo
+    ]
+
+    result = Supervisor.start_link(children, strategy: :one_for_one, name: Beancount.Supervisor)
+
+    # Auto-migrate on startup (SQLite :memory: needs this every time)
+    migrate!()
+
+    result
+  end
+
+  defp migrate! do
+    Ecto.Migrator.run(Beancount.Repo, :up, all: true)
+  rescue
+    _ -> :ok
   end
 end
