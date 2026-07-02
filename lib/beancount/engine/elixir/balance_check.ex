@@ -76,13 +76,15 @@ defmodule Beancount.Engine.Elixir.BalanceCheck do
     if Tolerance.within?(actual, balance.amount, tolerance) do
       []
     else
-      diff = Decimal.sub(balance.amount, actual) |> Decimal.abs()
+      signed_diff = Decimal.sub(balance.amount, actual)
+      diff = Decimal.abs(signed_diff)
+      direction = if Decimal.negative?(signed_diff), do: "too much", else: "too little"
 
       [
         %{
           line: nil,
           message:
-            "Balance failed for '#{balance.account}': expected #{format_amount(balance)} != accumulated #{format_amount(%{balance | amount: actual})} (#{format_decimal(diff)} too little)"
+            "Balance failed for '#{balance.account}': expected #{format_amount(balance)} != accumulated #{format_amount(%{balance | amount: actual})} (#{format_decimal(diff)} #{direction})"
         }
       ]
     end

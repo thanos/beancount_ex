@@ -8,8 +8,8 @@ mix run bench/engine_bench.exs
 ```
 
 `Engine.Elixir` processes directives through the booking engine in memory.
-The Ecto storage layer (SQLite `:memory:`) adds negligible overhead for
-check/validate operations.
+The optional Ecto storage layer is separate from `check/1` and `query/2`; see
+`guides/storage.md` for persistence setup and benchmarks there when needed.
 
 For large ledgers, configure SQLite with a file path to avoid in-memory
 pressure:

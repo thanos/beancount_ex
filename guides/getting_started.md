@@ -6,5 +6,5 @@ This guide moved to the **Accounting** track:
 
 See also:
 
-- [Accounting guides index](accounting/README.md)
+- [Accounting guides index](accounting/index.md)
 - [Library guides](library.md) (parser, engines, testing)

@@ -116,15 +116,24 @@ defmodule Beancount.Engine.Elixir.OptionsTest do
     assert message =~ "syntax error"
   end
 
-  test "apply/2 ignores title and unknown options" do
+  test "apply/2 ignores title and other known-but-unmodeled options" do
     options = Options.new()
 
     {unchanged, errors} = Options.apply(options, option("title", "Example"))
     assert errors == []
     assert unchanged == options
 
-    {unchanged, errors} = Options.apply(options, option("unknown_option", "value"))
+    {unchanged, errors} = Options.apply(options, option("render_commas", "TRUE"))
     assert errors == []
     assert unchanged == options
+  end
+
+  test "apply/2 rejects unknown option names (bean-check parity)" do
+    options = Options.new()
+
+    {unchanged, errors} = Options.apply(options, option("unknown_option", "value"))
+
+    assert unchanged == options
+    assert [%{message: "Invalid option: 'unknown_option'"}] = errors
   end
 end

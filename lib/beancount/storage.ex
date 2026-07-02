@@ -2,15 +2,68 @@ defmodule Beancount.Storage do
   @moduledoc """
   Storage and import/export for Beancount directives via Ecto.
 
-  The default backend is SQLite in-memory (`:memory:`). For persistence,
-  configure a file path:
+  `Beancount.Storage` is the high-level persistence API. It converts
+  `Beancount.Directives.*` structs to `Beancount.Schemas.*` rows (and back),
+  backed by `Beancount.Repo`. Use it to load a ledger into the database, read
+  it back, or round-trip through `.bean` files.
+
+  For SQL queries over stored rows, use `Beancount.Queries`. For balance
+  reports that require inventory booking, use `Beancount.Report` (which runs
+  BQL through the configured engine).
+
+  ## Configuration
+
+  The default backend is SQLite in-memory (`:memory:`), which requires no setup
+  and is cleared when the OS process exits. Keep `pool_size: 1` with
+  `:memory:` — each connection in the pool gets its own empty database.
+
+      config :beancount_ex, Beancount.Repo,
+        database: ":memory:",
+        pool_size: 1
+
+  For a persistent ledger, point `:database` at a file:
 
       config :beancount_ex, Beancount.Repo, database: "ledger.db"
 
-  ## Import / Export
+  The migration in `priv/repo/migrations` creates one table per directive type;
+  the application supervisor runs it on startup.
 
-      Beancount.Storage.import_file("ledger.bean")
-      Beancount.Storage.export_file("out.bean")
+  ## Public functions
+
+  | Function | Description |
+  |----------|-------------|
+  | `import_file/1` | Parse a `.bean` file and store the directives |
+  | `store/1` | Replace all rows with a directive list |
+  | `load/0` | Rebuild directive structs from the database |
+  | `export_file/1` | Render stored directives to a `.bean` file |
+  | `clear/0` | Delete every row from all directive tables |
+
+  `store/1` and `import_file/1` run in a transaction: existing rows are
+  cleared first, then each directive is inserted in source order (`file_order`).
+
+  ## Example: store, query, export
+
+      ledger = [
+        Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"]),
+        Beancount.transaction(~D[2026-01-31], "*", "Employer", "Salary", [
+          Beancount.posting("Assets:Bank", Decimal.new("100"), "USD"),
+          Beancount.posting("Income:Salary", Decimal.new("-100"), "USD")
+        ])
+      ]
+
+      {:ok, 2} = Beancount.Storage.store(ledger)
+
+      [%Beancount.Directives.Open{account: "Assets:Bank"} | _] =
+        Beancount.Storage.load()
+
+      Beancount.Queries.list_opens(prefix: "Assets")
+
+      :ok = Beancount.Storage.export_file("out.bean")
+
+  ## Import / export
+
+      {:ok, count} = Beancount.Storage.import_file("ledger.bean")
+      :ok = Beancount.Storage.export_file("out.bean")
 
   Future backends: PostgreSQL (via `postgrex`), Mnesia (via `ecto_mnesia`).
   """
@@ -18,7 +71,18 @@ defmodule Beancount.Storage do
   alias Beancount.{Parser, Renderer, Repo}
   alias Beancount.Schemas, as: S
 
-  @doc "Import directives from a .bean file into the database."
+  @doc """
+  Import directives from a `.bean` file into the database.
+
+  Parses the file and stores the resulting directives, replacing any existing
+  rows. Returns the number of directives stored.
+
+  ## Examples
+
+      {:ok, count} = Beancount.Storage.import_file("ledger.bean")
+      # => {:ok, 128}
+
+  """
   @spec import_file(Path.t()) :: {:ok, non_neg_integer()} | {:error, term()}
   def import_file(path) do
     with {:ok, text} <- File.read(path),
@@ -27,21 +91,53 @@ defmodule Beancount.Storage do
     end
   end
 
-  @doc "Store a list of directives into the database."
+  @doc """
+  Store a list of directives into the database.
+
+  Runs in a transaction that first clears all existing rows, then inserts each
+  directive into its matching table. Returns `{:ok, count}` where `count` is the
+  number of directives actually stored; entries that are not recognized
+  directives are skipped and not counted.
+
+  ## Examples
+
+      ledger = [
+        Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"]),
+        Beancount.transaction(~D[2026-01-31], "*", "Employer", "Salary", [
+          Beancount.posting("Assets:Bank", Decimal.new("100"), "USD"),
+          Beancount.posting("Income:Salary", Decimal.new("-100"), "USD")
+        ])
+      ]
+
+      {:ok, 2} = Beancount.Storage.store(ledger)
+
+  """
   @spec store([Beancount.Directive.t()]) :: {:ok, non_neg_integer()} | {:error, term()}
   def store(directives) do
     Repo.transaction(fn ->
       clear()
 
-      Enum.each(Enum.with_index(directives), fn {directive, index} ->
-        insert_directive(directive, index)
-      end)
-
-      length(directives)
+      directives
+      |> Enum.with_index()
+      |> Enum.map(fn {directive, index} -> insert_directive(directive, index) end)
+      |> Enum.count(&(&1 != :skip))
     end)
   end
 
-  @doc "Load all directives from the database, ordered by file_order."
+  @doc """
+  Load all directives from the database.
+
+  Rebuilds `Beancount.Directives.*` structs from the stored rows. Dated
+  directives are returned in date order; undated directives (`option`,
+  `include`, `plugin`, `pushtag`, `poptag`) sort ahead of dated ones.
+
+  ## Examples
+
+      Beancount.Storage.store([Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"])])
+
+      [%Beancount.Directives.Open{account: "Assets:Bank"}] = Beancount.Storage.load()
+
+  """
   @spec load() :: [Beancount.Directive.t()]
   def load do
     import Ecto.Query
@@ -51,22 +147,45 @@ defmodule Beancount.Storage do
       schema
       |> from(order_by: :file_order)
       |> Repo.all()
-      |> Enum.map(&to_directive/1)
+      |> Enum.map(fn row -> {row.file_order || 0, to_directive(row)} end)
     end)
-    |> Enum.sort_by(fn
-      %{date: %Date{} = d} -> {1, Date.to_iso8601(d), 0}
-      _ -> {0, "0000-01-01", 0}
+    |> Enum.sort_by(fn {file_order, directive} ->
+      case directive do
+        %{date: %Date{} = d} -> {1, Date.to_iso8601(d), file_order}
+        _ -> {0, "", file_order}
+      end
     end)
+    |> Enum.map(fn {_file_order, directive} -> directive end)
   end
 
-  @doc "Export all directives from the database to a .bean file."
+  @doc """
+  Export all directives from the database to a `.bean` file.
+
+  Loads every stored directive (see `load/0`) and renders it to Beancount text
+  at `path`.
+
+  ## Examples
+
+      :ok = Beancount.Storage.export_file("out.bean")
+
+  """
   @spec export_file(Path.t()) :: :ok | {:error, term()}
   def export_file(path) do
     directives = load()
     File.write(path, Renderer.render(directives))
   end
 
-  @doc "Clear all directives from the database."
+  @doc """
+  Clear all directives from the database.
+
+  Deletes every row from all directive tables. Always returns `:ok`.
+
+  ## Examples
+
+      :ok = Beancount.Storage.clear()
+      [] = Beancount.Storage.load()
+
+  """
   @spec clear() :: :ok
   def clear do
     Enum.each(tables(), fn {_schema, table} ->
@@ -149,7 +268,7 @@ defmodule Beancount.Storage do
   defp insert_directive(%D.Query{} = d, i),
     do: Repo.insert!(to_schema(d, i))
 
-  defp insert_directive(_, _i), do: :ok
+  defp insert_directive(_, _i), do: :skip
 
   # -- Schema -> Directive struct --
 
@@ -159,16 +278,16 @@ defmodule Beancount.Storage do
       account: s.account,
       currencies: s.currencies || [],
       booking: s.booking,
-      metadata: s.metadata || %{}
+      metadata: decode_meta(s.metadata)
     }
   end
 
   defp to_directive(%S.Close{} = s) do
-    %D.Close{date: s.date, account: s.account, metadata: s.metadata || %{}}
+    %D.Close{date: s.date, account: s.account, metadata: decode_meta(s.metadata)}
   end
 
   defp to_directive(%S.Commodity{} = s) do
-    %D.Commodity{date: s.date, currency: s.currency, metadata: s.metadata || %{}}
+    %D.Commodity{date: s.date, currency: s.currency, metadata: decode_meta(s.metadata)}
   end
 
   defp to_directive(%S.Transaction{} = s) do
@@ -180,7 +299,7 @@ defmodule Beancount.Storage do
       postings: Enum.map(s.postings || [], &posting_to_directive/1),
       tags: s.tags || [],
       links: s.links || [],
-      metadata: s.metadata || %{}
+      metadata: decode_meta(s.metadata)
     }
   end
 
@@ -191,7 +310,7 @@ defmodule Beancount.Storage do
       amount: s.amount,
       currency: s.currency,
       tolerance: s.tolerance,
-      metadata: s.metadata || %{}
+      metadata: decode_meta(s.metadata)
     }
   end
 
@@ -201,16 +320,21 @@ defmodule Beancount.Storage do
       commodity: s.commodity,
       amount: s.amount,
       currency: s.currency,
-      metadata: s.metadata || %{}
+      metadata: decode_meta(s.metadata)
     }
   end
 
   defp to_directive(%S.Note{} = s) do
-    %D.Note{date: s.date, account: s.account, comment: s.comment, metadata: s.metadata || %{}}
+    %D.Note{
+      date: s.date,
+      account: s.account,
+      comment: s.comment,
+      metadata: decode_meta(s.metadata)
+    }
   end
 
   defp to_directive(%S.Document{} = s) do
-    %D.Document{date: s.date, account: s.account, path: s.path, metadata: s.metadata || %{}}
+    %D.Document{date: s.date, account: s.account, path: s.path, metadata: decode_meta(s.metadata)}
   end
 
   defp to_directive(%S.Event{} = s) do
@@ -218,7 +342,7 @@ defmodule Beancount.Storage do
       date: s.date,
       type: s.type,
       description: s.description,
-      metadata: s.metadata || %{}
+      metadata: decode_meta(s.metadata)
     }
   end
 
@@ -226,8 +350,8 @@ defmodule Beancount.Storage do
     %D.Custom{
       date: s.date,
       type: s.type,
-      values: s.values || [],
-      metadata: s.metadata || %{}
+      values: decode_values(s.values),
+      metadata: decode_meta(s.metadata)
     }
   end
 
@@ -236,7 +360,7 @@ defmodule Beancount.Storage do
       date: s.date,
       account: s.account,
       source_account: s.source_account,
-      metadata: s.metadata || %{}
+      metadata: decode_meta(s.metadata)
     }
   end
 
@@ -245,7 +369,7 @@ defmodule Beancount.Storage do
   end
 
   defp to_directive(%S.Option{} = s) do
-    %D.Option{name: s.name, value: s.value}
+    %D.Option{name: s.name, value: decode_scalar(s.value)}
   end
 
   defp to_directive(%S.Plugin{} = s) do
@@ -261,7 +385,7 @@ defmodule Beancount.Storage do
   end
 
   defp to_directive(%S.Query{} = s) do
-    %D.Query{date: s.date, name: s.name, bql: s.bql, metadata: s.metadata || %{}}
+    %D.Query{date: s.date, name: s.name, bql: s.bql, metadata: decode_meta(s.metadata)}
   end
 
   defp posting_to_directive(%S.Posting{} = p) do
@@ -270,9 +394,9 @@ defmodule Beancount.Storage do
       amount: p.amount,
       currency: p.currency,
       cost: cost_to_directive(p.cost),
-      price: p.price,
+      price: price_to_directive(p.price),
       flag: p.flag,
-      metadata: p.metadata || %{}
+      metadata: decode_meta(p.metadata)
     }
   end
 
@@ -298,17 +422,22 @@ defmodule Beancount.Storage do
       account: d.account,
       currencies: d.currencies,
       booking: d.booking,
-      metadata: d.metadata,
+      metadata: encode_meta(d.metadata),
       file_order: i
     }
   end
 
   defp to_schema(%D.Close{} = d, i) do
-    %S.Close{date: d.date, account: d.account, metadata: d.metadata, file_order: i}
+    %S.Close{date: d.date, account: d.account, metadata: encode_meta(d.metadata), file_order: i}
   end
 
   defp to_schema(%D.Commodity{} = d, i) do
-    %S.Commodity{date: d.date, currency: d.currency, metadata: d.metadata, file_order: i}
+    %S.Commodity{
+      date: d.date,
+      currency: d.currency,
+      metadata: encode_meta(d.metadata),
+      file_order: i
+    }
   end
 
   defp to_schema(%D.Transaction{} = d, i) do
@@ -319,7 +448,7 @@ defmodule Beancount.Storage do
       narration: d.narration,
       tags: d.tags,
       links: d.links,
-      metadata: d.metadata,
+      metadata: encode_meta(d.metadata),
       file_order: i,
       postings: Enum.map(d.postings, &posting_to_schema/1)
     }
@@ -332,7 +461,7 @@ defmodule Beancount.Storage do
       amount: d.amount,
       currency: d.currency,
       tolerance: d.tolerance,
-      metadata: d.metadata,
+      metadata: encode_meta(d.metadata),
       file_order: i
     }
   end
@@ -343,7 +472,7 @@ defmodule Beancount.Storage do
       commodity: d.commodity,
       amount: d.amount,
       currency: d.currency,
-      metadata: d.metadata,
+      metadata: encode_meta(d.metadata),
       file_order: i
     }
   end
@@ -353,7 +482,7 @@ defmodule Beancount.Storage do
       date: d.date,
       account: d.account,
       comment: d.comment,
-      metadata: d.metadata,
+      metadata: encode_meta(d.metadata),
       file_order: i
     }
   end
@@ -363,7 +492,7 @@ defmodule Beancount.Storage do
       date: d.date,
       account: d.account,
       path: d.path,
-      metadata: d.metadata,
+      metadata: encode_meta(d.metadata),
       file_order: i
     }
   end
@@ -373,7 +502,7 @@ defmodule Beancount.Storage do
       date: d.date,
       type: d.type,
       description: d.description,
-      metadata: d.metadata,
+      metadata: encode_meta(d.metadata),
       file_order: i
     }
   end
@@ -383,7 +512,7 @@ defmodule Beancount.Storage do
       date: d.date,
       type: d.type,
       values: serialize_values(d.values),
-      metadata: d.metadata,
+      metadata: encode_meta(d.metadata),
       file_order: i
     }
   end
@@ -393,7 +522,7 @@ defmodule Beancount.Storage do
       date: d.date,
       account: d.account,
       source_account: d.source_account,
-      metadata: d.metadata,
+      metadata: encode_meta(d.metadata),
       file_order: i
     }
   end
@@ -403,7 +532,7 @@ defmodule Beancount.Storage do
   end
 
   defp to_schema(%D.Option{} = d, i) do
-    %S.Option{name: d.name, value: to_string(d.value), file_order: i}
+    %S.Option{name: d.name, value: encode_scalar(d.value), file_order: i}
   end
 
   defp to_schema(%D.Plugin{} = d, i) do
@@ -419,7 +548,13 @@ defmodule Beancount.Storage do
   end
 
   defp to_schema(%D.Query{} = d, i) do
-    %S.Query{date: d.date, name: d.name, bql: d.bql, metadata: d.metadata, file_order: i}
+    %S.Query{
+      date: d.date,
+      name: d.name,
+      bql: d.bql,
+      metadata: encode_meta(d.metadata),
+      file_order: i
+    }
   end
 
   defp posting_to_schema(%D.Posting{} = p) do
@@ -428,9 +563,9 @@ defmodule Beancount.Storage do
       amount: p.amount,
       currency: p.currency,
       cost: cost_to_schema(p.cost),
-      price: p.price,
+      price: price_to_schema(p.price),
       flag: p.flag,
-      metadata: p.metadata
+      metadata: encode_meta(p.metadata)
     }
   end
 
@@ -448,24 +583,78 @@ defmodule Beancount.Storage do
     }
   end
 
-  defp serialize_values(values) when is_list(values) do
-    Enum.map(values, &serialize_value/1)
+  # -- Price annotation <-> embedded schema --
+
+  defp price_to_schema(nil), do: nil
+
+  defp price_to_schema(%{amount: amount, currency: currency} = price) do
+    %S.PriceAnnotation{
+      amount: amount,
+      currency: currency,
+      type: price |> Map.get(:type, :unit) |> Atom.to_string()
+    }
   end
 
-  defp serialize_value(%Decimal{} = d),
+  defp price_to_directive(nil), do: nil
+
+  defp price_to_directive(%S.PriceAnnotation{amount: amount, currency: currency, type: type}) do
+    %{amount: amount, currency: currency, type: price_type(type)}
+  end
+
+  defp price_type("total"), do: :total
+  defp price_type(_unit), do: :unit
+
+  # -- Typed scalar codec (custom values, option values, metadata values) --
+
+  defp serialize_values(nil), do: []
+  defp serialize_values(values) when is_list(values), do: Enum.map(values, &encode_scalar/1)
+
+  defp decode_values(nil), do: []
+  defp decode_values(values) when is_list(values), do: Enum.map(values, &decode_scalar/1)
+
+  defp encode_meta(nil), do: %{}
+
+  defp encode_meta(map) when is_map(map),
+    do: Map.new(map, fn {key, value} -> {to_string(key), encode_scalar(value)} end)
+
+  defp decode_meta(nil), do: %{}
+
+  defp decode_meta(map) when is_map(map),
+    do: Map.new(map, fn {key, value} -> {key, decode_scalar(value)} end)
+
+  defp encode_scalar(%Decimal{} = d),
     do: %{"type" => "decimal", "value" => Decimal.to_string(d)}
 
-  defp serialize_value(%Date{} = d), do: %{"type" => "date", "value" => Date.to_iso8601(d)}
+  defp encode_scalar(%Date{} = d), do: %{"type" => "date", "value" => Date.to_iso8601(d)}
 
-  defp serialize_value(%Beancount.Value.Account{name: n}),
+  defp encode_scalar(%Beancount.Value.Account{name: n}),
     do: %{"type" => "account", "value" => n}
 
-  defp serialize_value(%Beancount.Value.Tag{name: n}), do: %{"type" => "tag", "value" => n}
+  defp encode_scalar(%Beancount.Value.Tag{name: n}), do: %{"type" => "tag", "value" => n}
 
-  defp serialize_value(%Beancount.Value.Amount{number: n, currency: c}),
+  defp encode_scalar(%Beancount.Value.Amount{number: n, currency: c}),
     do: %{"type" => "amount", "value" => "#{Decimal.to_string(n)} #{c}"}
 
-  defp serialize_value(v) when is_binary(v), do: %{"type" => "string", "value" => v}
-  defp serialize_value(v) when is_boolean(v), do: %{"type" => "boolean", "value" => v}
-  defp serialize_value(v), do: %{"type" => "term", "value" => inspect(v)}
+  defp encode_scalar(v) when is_binary(v), do: %{"type" => "string", "value" => v}
+  defp encode_scalar(v) when is_boolean(v), do: %{"type" => "boolean", "value" => v}
+  defp encode_scalar(v), do: %{"type" => "term", "value" => inspect(v)}
+
+  defp decode_scalar(%{"type" => "decimal", "value" => v}), do: Decimal.new(v)
+  defp decode_scalar(%{"type" => "date", "value" => v}), do: Date.from_iso8601!(v)
+
+  defp decode_scalar(%{"type" => "account", "value" => v}),
+    do: %Beancount.Value.Account{name: v}
+
+  defp decode_scalar(%{"type" => "tag", "value" => v}), do: %Beancount.Value.Tag{name: v}
+
+  defp decode_scalar(%{"type" => "amount", "value" => v}) do
+    [number, currency] = String.split(v, " ", parts: 2)
+    %Beancount.Value.Amount{number: Decimal.new(number), currency: currency}
+  end
+
+  defp decode_scalar(%{"type" => "string", "value" => v}), do: v
+  defp decode_scalar(%{"type" => "boolean", "value" => v}), do: v
+  defp decode_scalar(%{"type" => "term", "value" => v}), do: v
+  # Legacy/untagged values (e.g. pre-existing rows) pass through unchanged.
+  defp decode_scalar(v), do: v
 end

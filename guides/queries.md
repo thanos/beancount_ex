@@ -34,6 +34,9 @@ For BQL queries beyond the canned set, use `Engine.CLI` (shells out to
 For ad-hoc queries against stored directives, use `Beancount.Queries`:
 
 ```elixir
+# Prerequisites: store directives first (Storage replaces any existing rows)
+Beancount.Storage.store(directives)
+
 # List all open directives for asset accounts
 Beancount.Queries.list_opens(prefix: "Assets")
 

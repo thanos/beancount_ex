@@ -10,10 +10,11 @@ An idiomatic Elixir interface to [Beancount](https://beancount.github.io/).
 
 > **`beancount_ex` is not a General Ledger.** It is a compatibility layer and
 > *behavioral oracle*: it constructs Beancount directives as typed Elixir
-> structs, renders them to deterministic `.bean` text, validates them, and
-> stores them via Ecto. The default engine wraps real Beancount
+> structs, renders them to deterministic `.bean` text, and validates them
+> through a configurable engine. The default engine wraps real Beancount
 > (`bean-check` / `bean-query`); the native `Beancount.Engine.Elixir` can
-> replace it **without changing the public API**.
+> replace it **without changing the public API**. Optional Ecto storage
+> (`Beancount.Storage`) persists directives to SQLite when you need it.
 
 ## Why this library exists
 
@@ -33,11 +34,15 @@ By wrapping it behind a stable Elixir API, `beancount_ex`:
             |                           |
             v                           v
         Renderer               Beancount.Engine
-            |                           |
-            v                  +--------+--------+
-        Ecto Storage           v                 v
-        (SQLite/Postgres)  Engine.CLI      Engine.Elixir
-                           (bean-check)    (native booking)
+            |                  +--------+--------+
+            |                  v                 v
+            |             Engine.CLI      Engine.Elixir
+            |             (bean-check)    (native booking)
+            |
+            v  (opt-in)
+        Ecto Storage
+        (SQLite/Postgres)
+        Storage / Queries
 ```
 
 ## Installation
@@ -99,6 +104,11 @@ bean = Beancount.render(ledger)
 
 # Optional: Explorer DataFrame (requires {:explorer, "~> 0.11"})
 # df = Beancount.Explorer.to_dataframe(balances)
+
+# Optional: persist directives to the built-in SQLite store
+{:ok, 3} = Beancount.Storage.store(ledger)
+loaded = Beancount.Storage.load()
+Beancount.Queries.list_opens(prefix: "Assets")
 ```
 
 The public API is `Beancount`. There is intentionally **no** public

@@ -257,6 +257,57 @@ defmodule Beancount.Engine.Elixir.BookingTest do
     assert message =~ "No position matches"
   end
 
+  test "reduce/4 short → partial cover → re-short tracks lot state" do
+    inventory =
+      Inventory.new()
+      |> then(fn inv ->
+        {:ok, inv} =
+          Booking.reduce(
+            inv,
+            "Assets:Stocks",
+            Beancount.posting("Assets:Stocks", Decimal.new("-2"), "AAPL"),
+            "FIFO"
+          )
+
+        inv
+      end)
+
+    assert Decimal.equal?(
+             Inventory.balance(inventory, "Assets:Stocks", "AAPL"),
+             Decimal.new("-2")
+           )
+
+    # Cover one unit of the short position.
+    assert {:ok, covered} =
+             Inventory.apply_posting(
+               inventory,
+               "Assets:Stocks",
+               Beancount.posting("Assets:Stocks", Decimal.new("1"), "AAPL"),
+               nil
+             )
+
+    assert Decimal.equal?(Inventory.balance(covered, "Assets:Stocks", "AAPL"), Decimal.new("-1"))
+
+    # Sell again to re-short.
+    assert {:ok, reshort} =
+             Booking.reduce(
+               covered,
+               "Assets:Stocks",
+               Beancount.posting("Assets:Stocks", Decimal.new("-1.5"), "AAPL"),
+               "FIFO"
+             )
+
+    lots = get_in(reshort, ["Assets:Stocks", "AAPL"])
+    assert length(lots) == 1
+    assert [%Lot{units: units, cost: nil}] = lots
+    assert Decimal.equal?(units, Decimal.new("-2.5"))
+
+    assert Decimal.equal?(
+             Inventory.balance(reshort, "Assets:Stocks", "AAPL"),
+             Decimal.new("-2.5")
+           )
+  end
+
   test "reduce/4 merges average lots when the first lot has nil cost" do
     inventory =
       Inventory.new()

@@ -18,11 +18,6 @@ defmodule Beancount.Engine.Elixir.PostingAmount do
     end
   end
 
-  @spec cost_basis(Posting.t()) :: {String.t(), Decimal.t()} | nil
-  def cost_basis(%Posting{} = posting) do
-    cost_contribution(posting)
-  end
-
   @spec expand_postings([Posting.t()]) :: [Posting.t()]
   def expand_postings(postings) do
     case infer_elided_posting(postings) do

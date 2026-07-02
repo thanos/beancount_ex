@@ -49,11 +49,10 @@ defmodule Beancount.MixProject do
 
   defp deps do
     [
-      {:decimal, "~> 3.1", override: true},
+      {:decimal, "~> 3.1"},
       {:jason, "~> 1.4"},
       {:ecto_sql, "~> 3.12"},
       {:ecto_sqlite3, "~> 0.18"},
-      {:explorer, "~> 0.11.1", optional: true},
       {:stream_data, "~> 1.0", only: [:test, :dev]},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
@@ -73,8 +72,25 @@ defmodule Beancount.MixProject do
   defp package do
     [
       licenses: ["MIT"],
+      maintainers: ["Thanos Vassilakis"],
       links: %{"GitHub" => @source_url},
-      files: ~w(lib guides .formatter.exs mix.exs README.md CHANGELOG.md LICENSE)
+      files: ~w(lib guides .formatter.exs mix.exs README.md CHANGELOG.md LICENSE),
+      keywords: [
+        "beancount",
+        "accounting",
+        "double-entry",
+        "ledger",
+        "personal-finance",
+        "plain-text-accounting",
+        "elixir",
+        "ecto",
+        "parser",
+        "bean-check",
+        "bean-query",
+        "bql",
+        "inventory",
+        "oracle"
+      ]
     ]
   end
 
@@ -135,7 +151,7 @@ defmodule Beancount.MixProject do
         Rendering: [Beancount.Directive, Beancount.Renderer],
         Reporting: [Beancount.Report, Beancount.Query.Result, Beancount.Explorer],
         Results: [Beancount.Result, Beancount.Normalizer],
-        Storage: [Beancount.Repo, Beancount.Schemas],
+        Storage: [Beancount.Repo, Beancount.Schemas, ~r/Beancount\.Schemas\..*/],
         Testing: [Beancount.Golden, Beancount.Property]
       ],
       source_ref: "v#{@version}"

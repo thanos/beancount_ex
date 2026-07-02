@@ -37,7 +37,7 @@ ledger = [...]  # or File.read!("ledger.bean")
 | `balance_sheet/1` | Assets, Liabilities, Equity |
 | `income_statement/1` | Income and Expenses |
 | `holdings/1` | Units and cost for asset accounts |
-| `journal/1` | Transaction history for one account |
+| `journal/2` | Transaction history for one account |
 
 ## Result shape
 
@@ -72,7 +72,15 @@ Use `query_text/2` or `query_file/2` when the ledger is already on disk.
 
 ## Explorer DataFrames (optional)
 
-Add `{:explorer, "~> 0.11"}` to your deps, then:
+Add `{:explorer, "~> 0.11"}` to your app's `mix.exs` (Explorer is not a dependency of
+`beancount_ex` itself — it still pins `decimal ~> 2.1`, while this library requires
+`decimal ~> 3.1` for Ecto). Until Explorer supports Decimal 3, you may need:
+
+```elixir
+{:decimal, "~> 3.1", override: true}
+```
+
+in your app as well. Then:
 
 ```elixir
 {:ok, result} = Beancount.balances(ledger)

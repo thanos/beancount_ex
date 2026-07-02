@@ -9,6 +9,9 @@ defmodule Beancount do
   (`bean-check` / `bean-query`); the native `Beancount.Engine.Elixir` can
   replace it **without changing this public API**.
 
+  Optional persistence: `Beancount.Storage` stores directives in SQLite via
+  Ecto; `Beancount.Queries` reads them back without running the booking engine.
+
   ## Quick start
 
       ledger = [
@@ -640,7 +643,10 @@ defmodule Beancount do
       \"\"\"
 
       {:ok, result} =
-        Beancount.Engine.Elixir.query(text, "SELECT account, sum(position) GROUP BY account")
+        Beancount.Engine.Elixir.query(
+          text,
+          "SELECT account, sum(position) AS balance GROUP BY account ORDER BY account"
+        )
 
       result.columns
       # => ["account", "balance"]
@@ -669,7 +675,10 @@ defmodule Beancount do
       \"\"\")
 
       {:ok, _} =
-        Beancount.Engine.Elixir.query(File.read!(path), "SELECT account GROUP BY account")
+        Beancount.Engine.Elixir.query(
+          File.read!(path),
+          "SELECT account, sum(position) AS balance GROUP BY account ORDER BY account"
+        )
 
   """
   @spec query_file(Path.t(), binary()) :: query_return()

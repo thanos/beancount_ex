@@ -66,8 +66,12 @@ namespace:
 | `beancount_events` | `Schemas.Event` | date, type, description |
 | `beancount_customs` | `Schemas.Custom` | date, type, values (JSON) |
 | `beancount_pads` | `Schemas.Pad` | date, account, source_account |
-| `beancount_options` | `Schemas.Option` | name, value |
-| ... | ... | ... |
+| `beancount_options` | `Schemas.Option` | name, value (type-tagged map) |
+| `beancount_includes` | `Schemas.Include` | path |
+| `beancount_plugins` | `Schemas.Plugin` | module, config |
+| `beancount_push_tags` | `Schemas.PushTag` | tag |
+| `beancount_pop_tags` | `Schemas.PopTag` | tag |
+| `beancount_queries` | `Schemas.Query` | date, name, bql |
 
 Transaction postings are stored as a JSON column (`embeds_many`). Cost specs
 are embedded within each posting. Metadata is stored as JSON (`:map`).

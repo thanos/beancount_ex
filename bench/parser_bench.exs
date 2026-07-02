@@ -2,15 +2,16 @@
 #
 # Run: mix run bench/parser_bench.exs
 
-golden_beans =
+golden_sources =
   "test/fixtures/golden"
   |> Path.join("*/expected.bean")
   |> Path.wildcard()
+  |> Enum.map(&File.read!/1)
 
 example = "test/fixtures/external/beancount/example.beancount"
 
 inputs = %{
-  "golden fixtures (30)" => fn -> Enum.each(golden_beans, &Beancount.parse_text/1) end,
+  "golden fixtures (30)" => fn -> Enum.each(golden_sources, &Beancount.parse_text/1) end,
   "example.beancount" => fn -> Beancount.parse_text(File.read!(example)) end
 }
 

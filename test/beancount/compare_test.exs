@@ -6,14 +6,7 @@ defmodule Beancount.CompareTest do
     :ok
   end
 
-  @ledger [
-    Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"]),
-    Beancount.open(~D[2026-01-01], "Income:Salary", ["USD"]),
-    Beancount.transaction(~D[2026-01-31], "*", "Employer", "Salary", [
-      Beancount.posting("Assets:Bank", Decimal.new("5000"), "USD"),
-      Beancount.posting("Income:Salary", Decimal.new("-5000"), "USD")
-    ])
-  ]
+  @ledger Beancount.TestFixtures.salary_ledger()
 
   test "compare/3 reports equivalent engines as equivalent" do
     assert {:ok, :equivalent} =
@@ -147,11 +140,18 @@ defmodule Beancount.CompareTest do
              )
   end
 
-  test "compare/3 returns query diff when an engine fails a canned query" do
+  test "compare/3 reports query failures from an engine (both directions)" do
     assert {:error, %Beancount.Property.Diff{callback: :query, message: "query failed"}} =
              Beancount.Compare.compare(
                Beancount.BrokenQueryEngine,
                Beancount.Engine.Elixir,
+               @ledger
+             )
+
+    assert {:error, %Beancount.Property.Diff{callback: :query, message: "query failed"}} =
+             Beancount.Compare.compare(
+               Beancount.Engine.Elixir,
+               Beancount.BrokenQueryEngine,
                @ledger
              )
   end
@@ -164,22 +164,6 @@ defmodule Beancount.CompareTest do
                Beancount.CompareTest.UniqueCellA,
                Beancount.CompareTest.UniqueCellB,
                stocks_ledger
-             )
-  end
-
-  test "compare/3 reports query failures from an engine" do
-    assert {:error, %Beancount.Property.Diff{callback: :query, message: "query failed"}} =
-             Beancount.Compare.compare(
-               Beancount.BrokenQueryEngine,
-               Beancount.Engine.Elixir,
-               @ledger
-             )
-
-    assert {:error, %Beancount.Property.Diff{callback: :query, message: "query failed"}} =
-             Beancount.Compare.compare(
-               Beancount.Engine.Elixir,
-               Beancount.BrokenQueryEngine,
-               @ledger
              )
   end
 
@@ -229,6 +213,44 @@ defmodule Beancount.CompareTest do
                  Beancount.CompareTest.CostLotB,
                  Beancount.render(@ledger)
                )
+    end
+  end
+
+  @stub_modules [
+    Beancount.CompareTest.UniqueCellA,
+    Beancount.CompareTest.UniqueCellB,
+    Beancount.CompareTest.PositionLotsA,
+    Beancount.CompareTest.PositionLotsB,
+    Beancount.CompareTest.QueryFormatA,
+    Beancount.CompareTest.QueryFormatB,
+    Beancount.CompareTest.CLIContextOracle,
+    Beancount.CompareTest.CLIContextNative,
+    Beancount.CompareTest.OtherErrorA,
+    Beancount.CompareTest.OtherErrorB,
+    Beancount.CompareTest.BookingInsufficientCLI,
+    Beancount.CompareTest.BookingInsufficientNative,
+    Beancount.CompareTest.PlainAmountA,
+    Beancount.CompareTest.PlainAmountB,
+    Beancount.CompareTest.ZeroBalanceA,
+    Beancount.CompareTest.ZeroBalanceB,
+    Beancount.CompareTest.CostLotA,
+    Beancount.CompareTest.CostLotB
+  ]
+
+  test "compare stub engines implement the full Beancount.Engine behaviour" do
+    for module <- @stub_modules do
+      assert module.render([]) == ""
+
+      result = module.check_file("/tmp/ledger.bean")
+
+      assert match?({:ok, %Beancount.Result{}}, result) or
+               match?({:error, %Beancount.Result{status: :error}}, result)
+
+      assert {:ok, %Beancount.Query.Result{columns: columns, rows: rows}} =
+               module.query("ledger", "SELECT account, balance")
+
+      assert is_list(columns)
+      assert is_list(rows)
     end
   end
 end

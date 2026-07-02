@@ -3,4 +3,4 @@
 #
 #     mix test                     # unit + property + golden (no Beancount)
 #     mix test --include beancount # also run integration tests
-ExUnit.start(exclude: [:integration, :beancount])
+ExUnit.start(exclude: [:integration, :beancount, :explorer])

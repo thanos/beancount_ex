@@ -546,4 +546,49 @@ defmodule Beancount.Parser.GrammarTest do
     assert {:error, %Beancount.Parser.Error{message: message}} = Grammar.parse(text)
     assert message =~ "expected quoted string"
   end
+
+  test "parse/1 parses a transaction whose header is only a tag (empty payee/narration)" do
+    text = """
+    2026-01-01 open Assets:Bank USD
+    2026-01-01 open Equity:Opening USD
+
+    2026-01-02 * #trip
+      Assets:Bank  1 USD
+      Equity:Opening  -1 USD
+    """
+
+    assert {:ok, directives} = Grammar.parse(text)
+
+    assert [%Beancount.Directives.Transaction{payee: nil, narration: "", tags: tags}] =
+             Enum.filter(directives, &match?(%Beancount.Directives.Transaction{}, &1))
+
+    assert "trip" in tags
+  end
+
+  test "parse/1 propagates a posting number error inside a transaction" do
+    text = """
+    2026-01-01 open Assets:Bank USD
+
+    2026-01-02 * "Payee" "Narration"
+      Assets:Bank  1.2.3 USD
+    """
+
+    assert {:error, %Beancount.Parser.Error{}} = Grammar.parse(text)
+  end
+
+  test "parse/1 propagates a metadata value error inside a transaction" do
+    text =
+      ~s(2026-01-01 open Assets:Bank USD\n) <>
+        ~s(\n2026-01-02 * "Payee" "Narration"\n) <>
+        ~s(  Assets:Bank  1 USD\n) <>
+        ~s(    memo: "unterminated\n)
+
+    assert {:error, %Beancount.Parser.Error{}} = Grammar.parse(text)
+  end
+
+  test "parse/1 propagates a custom value error" do
+    text = ~s(2026-01-01 custom "budget" 1.2.3\n)
+
+    assert {:error, %Beancount.Parser.Error{}} = Grammar.parse(text)
+  end
 end

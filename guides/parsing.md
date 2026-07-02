@@ -5,7 +5,7 @@
 > [Parsing (Livebook)](livebook/parsing.livemd). This page documents the
 > library implementation.
 
-`Beancount.Parser` is, a native NimbleParsec-based parser that turns
+`Beancount.Parser` is a native regex-lexer and line-grammar parser that turns
 `.bean` text into the same typed directive structs you build with the public
 `Beancount.*` constructors.
 
@@ -58,9 +58,12 @@ generated ledgers from `Beancount.Property.ledger/0`.
 
 ## Relationship to engines
 
-`Beancount.Engine.Elixir` uses the parser internally for `check/1` and `query/2`.
-`Beancount.Engine.CLI` continues to shell out to `bean-check` / `bean-query` and
-remains the default engine until native parity is proven.
+`Beancount.Engine.Elixir` uses the parser internally for `check/1` and canned
+reports in `query/2`. `Beancount.Engine.CLI` shells out to `bean-check` /
+`bean-query` and remains the **default** engine for validation and arbitrary
+BQL. Native parity on the canned report set is proven; swap engines via
+`config :beancount_ex, engine: Beancount.Engine.Elixir` when you want to run
+without Python tooling.
 
 Parsing is independent of validation semantics: the parser produces structs;
 engines decide what is valid.

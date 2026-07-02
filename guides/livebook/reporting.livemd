@@ -79,9 +79,17 @@ Beancount.Explorer.to_dataframe(result)
 
 ## Custom BQL query
 
+The native engine supports only the canned report queries (balances,
+balance_sheet, income_statement, holdings, journal). For arbitrary BQL, either
+switch to `Engine.CLI` or use one of the canned shapes:
+
 ```elixir
+# Works with Engine.Elixir (canned balances query)
 {:ok, result} =
-  Beancount.query(ledger, "SELECT account, sum(position) GROUP BY account ORDER BY account")
+  Beancount.query(
+    ledger,
+    "SELECT account, sum(position) AS balance GROUP BY account ORDER BY account"
+  )
 
 Beancount.Explorer.to_dataframe(result)
 ```

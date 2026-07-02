@@ -93,15 +93,18 @@ Beancount.balances/1, income_statement/1, …  ──►  dashboards
 
 1. **Capture** - build directives from forms, CSV importers, or LLM output.
 2. **Validate** - `check/1` before persisting; surface `result.normalized.errors`.
-3. **Persist** - store directive lists (e.g. in a database as JSON) or rendered text.
-4. **Report** - run canned queries or custom BQL via `Beancount.query/2`.
+3. **Persist** - `Beancount.Storage.store/1` (SQLite via Ecto), rendered text,
+   or your own store.
+4. **Report** - canned reports via `Beancount.balances/1` and friends, ad-hoc
+   filters via `Beancount.Queries`, or arbitrary BQL via `Beancount.query/2`.
 
 ## Why a library instead of only `.bean` files?
 
 - **Type safety** - structs and `Decimal` catch mistakes at compile time.
 - **Composition** - generate payroll, imports, or projections from Elixir code.
 - **Testing** - property tests and golden files on rendered output.
-- **Engine swap** - same API with CLI oracle today, native engine tomorrow.
+- **Engine swap** - same API with `Engine.CLI` (default) or native
+  `Engine.Elixir` for validation and canned reports without Python tooling.
 
 ## Custom scripting
 

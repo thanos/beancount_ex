@@ -2,7 +2,7 @@ defmodule Beancount.Engine.Elixir.Reports do
   @moduledoc false
 
   alias Beancount.Directives.{Open, Transaction}
-  alias Beancount.Engine.Elixir.{Inventory, Ledger, Lot, PostingAmount}
+  alias Beancount.Engine.Elixir.{DirectiveSort, Inventory, Ledger, Lot, PostingAmount}
   alias Beancount.Query.Result
   alias Beancount.Result, as: CheckResult
 
@@ -30,8 +30,10 @@ defmodule Beancount.Engine.Elixir.Reports do
         holdings(directives)
 
       journal_query?(normalized) ->
-        account = journal_account(normalized)
-        journal(directives, account)
+        case journal_account(normalized) do
+          nil -> unsupported_bql(bql)
+          account -> journal(directives, account)
+        end
 
       true ->
         unsupported_bql(bql)
@@ -94,7 +96,9 @@ defmodule Beancount.Engine.Elixir.Reports do
 
   def journal(directives, account) do
     {rows, _balance, _currency} =
-      Enum.reduce(directives, {[], Decimal.new(0), nil}, fn directive, state ->
+      directives
+      |> DirectiveSort.order()
+      |> Enum.reduce({[], Decimal.new(0), nil}, fn directive, state ->
         journal_rows_for_directive(directive, account, state)
       end)
 
@@ -117,7 +121,7 @@ defmodule Beancount.Engine.Elixir.Reports do
   defp journal_account(bql) do
     case Regex.run(~r/WHERE account = "((?:\\.|[^"\\])*)"/, bql) do
       [_, account] -> String.replace(account, "\\", "")
-      _ -> ""
+      _ -> nil
     end
   end
 

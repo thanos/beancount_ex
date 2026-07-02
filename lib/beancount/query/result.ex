@@ -4,7 +4,7 @@ defmodule Beancount.Query.Result do
 
   Like `Beancount.Result`, this struct is populated identically by the CLI
   engine today and by any future native engine, so query output can be compared
-  across backends (the v0.3 oracle strategy).
+  across backends (see `Beancount.Compare` and the oracle strategy guide).
 
   Fields:
 

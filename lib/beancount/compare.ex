@@ -7,10 +7,16 @@ defmodule Beancount.Compare do
   `holdings`).
   """
 
+  alias Beancount.CostSpec
+  alias Beancount.Directives.Posting
   alias Beancount.Engine.Elixir.ErrorCategory
+  alias Beancount.Parser.Posting, as: PostingParser
   alias Beancount.Property.Diff
   alias Beancount.Query.Result, as: QueryResult
+  alias Beancount.Renderer
   alias Beancount.Result
+
+  @position_account "Assets:Compare"
 
   @canned_queries [
     {"balances", "SELECT account, sum(position) AS balance GROUP BY account ORDER BY account"},
@@ -204,8 +210,8 @@ defmodule Beancount.Compare do
   end
 
   defp zero_position?(segment) do
-    case Regex.run(~r/^(-?\d+(?:\.\d+)?)\s+(\S+)/, segment) do
-      [_, number, _commodity] -> Decimal.equal?(Decimal.new(number), 0)
+    case parse_position_segment(segment) do
+      {:ok, %Posting{amount: %Decimal{} = amount}} -> Decimal.equal?(amount, 0)
       _ -> false
     end
   end
@@ -220,20 +226,12 @@ defmodule Beancount.Compare do
   end
 
   defp merge_position_segment(acc, segment) do
-    case Regex.run(~r/^(-?\d+(?:\.\d+)?)\s+(\S+)(?:\s+(\{.+?\}))?$/, segment) do
-      [_, number, commodity, cost] ->
-        key = {commodity, normalize_cost_suffix(cost)}
+    case parse_position_segment(segment) do
+      {:ok, %Posting{amount: %Decimal{} = amount, currency: currency} = posting}
+      when is_binary(currency) ->
+        key = {currency, cost_key(posting.cost)}
 
-        Map.update(acc, key, Decimal.new(number), fn existing ->
-          Decimal.add(existing, Decimal.new(number))
-        end)
-
-      [_, number, commodity] ->
-        key = {commodity, ""}
-
-        Map.update(acc, key, Decimal.new(number), fn existing ->
-          Decimal.add(existing, Decimal.new(number))
-        end)
+        Map.update(acc, key, amount, &Decimal.add(&1, amount))
 
       _ ->
         Map.put(acc, {segment, :unique}, Decimal.new(1))
@@ -243,68 +241,51 @@ defmodule Beancount.Compare do
   defp format_merged_position({{commodity, ""}, units}),
     do: format_position_units(units, commodity, nil)
 
-  defp format_merged_position({{commodity, cost}, units}) when is_binary(cost),
-    do: format_position_units(units, commodity, cost)
+  defp format_merged_position({{commodity, cost_suffix}, units}) when is_binary(cost_suffix),
+    do: format_position_units(units, commodity, cost_suffix)
 
   defp format_merged_position({{segment, :unique}, _}), do: segment
 
-  defp format_position_units(units, commodity, cost) do
-    base =
-      units
-      |> Decimal.normalize()
-      |> Decimal.to_string(:normal)
-      |> Kernel.<>(" ")
-      |> Kernel.<>(commodity)
+  defp format_position_units(units, commodity, cost_suffix) do
+    amount = units |> Decimal.normalize() |> Renderer.format_decimal()
+    base = amount <> " " <> commodity
 
-    case normalize_cost_suffix(cost) do
+    case cost_suffix do
+      nil -> base
       "" -> base
-      normalized_cost -> base <> " " <> normalized_cost
+      suffix -> base <> " " <> suffix
     end
   end
 
-  defp normalize_cost_suffix(nil), do: ""
-  defp normalize_cost_suffix(""), do: ""
+  defp parse_position_segment(segment) do
+    trimmed = String.trim(segment)
 
-  defp normalize_cost_suffix("{" <> rest) do
-    inner = rest |> String.trim_trailing("}") |> String.trim()
-
-    case Regex.run(~r/^(-?\d+(?:\.\d+)?)\s+(.+)$/, inner) do
-      [_, number, currency] ->
-        normalized =
-          number |> Decimal.new() |> Decimal.normalize() |> Decimal.to_string(:normal)
-
-        "{ #{normalized} #{currency}}"
-
-      _ ->
-        "{ #{inner}}"
-    end
+    PostingParser.parse_line("#{@position_account} #{trimmed}", line: 0)
   end
 
-  defp normalize_cost_suffix(cost) when is_binary(cost), do: String.trim(cost)
+  defp cost_key(nil), do: ""
+
+  defp cost_key(cost) do
+    cost
+    |> CostSpec.normalize()
+    |> CostSpec.to_string()
+  end
 
   defp normalize_decimal_string(cell) do
-    case Regex.run(~r/^(-?\d+(?:\.\d+)?)\s+(\S+)(?:\s+(\{.+?\}))?$/, cell) do
-      [_, number, commodity, cost] ->
-        format_normalized_position(number, commodity, cost)
-
-      [_, number, commodity] ->
-        format_normalized_position(number, commodity, nil)
-
-      _ ->
-        cell
+    case parse_position_segment(cell) do
+      {:ok, posting} -> format_position_posting(posting)
+      _ -> cell
     end
   end
 
-  defp format_normalized_position(number, commodity, cost) do
-    normalized =
-      number |> Decimal.new() |> Decimal.normalize() |> Decimal.to_string(:normal)
-
-    if is_binary(cost) and cost != "" do
-      normalized <> " " <> commodity <> " " <> normalize_cost_suffix(cost)
-    else
-      normalized <> " " <> commodity
-    end
+  defp format_position_posting(
+         %Posting{amount: %Decimal{} = amount, currency: currency} = posting
+       )
+       when is_binary(currency) do
+    format_position_units(amount, currency, cost_key(posting.cost))
   end
+
+  defp format_position_posting(_), do: ""
 
   # Lines bean-check prints as context below a real error (not standalone messages).
   defp cli_context_line?(message) when is_binary(message) do

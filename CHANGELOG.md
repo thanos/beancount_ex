@@ -13,7 +13,8 @@ Ecto storage, native queries, Datalog removal, anti-pattern fixes.
 
 ### Added
 - Ecto-based storage: SQLite (`:memory:`) default, SQLite file for persistence.
-- Ecto schemas for all 18 directive types (`Beancount.Schemas.*`).
+- Ecto schemas for all 17 directive tables (`Beancount.Schemas.*`; `Posting` and
+  `CostSpec` are embedded).
 - `Beancount.Storage` API: `store/1`, `load/0`, `clear/0`, `import_file/1`,
   `export_file/1`.
 - `Beancount.Queries` module: Ecto.Query-based ad-hoc queries against stored
@@ -55,10 +56,6 @@ Ecto storage, native queries, Datalog removal, anti-pattern fixes.
 - T-5: Fixed stale "v0.3 parity contract" test name.
 - T-8: Added position-cell normalization tests.
 - T-9: Added pad + cost-basis interaction test.
-- T-11: Added shared test ledger fixtures.
-
-### Fixed
-
 - Native `Ledger` now processes dated directives in Beancount date order
   (`entry_sortkey`) instead of source-file order, closing the `balance_failed`
   gap on vendored `example.beancount`.
@@ -90,8 +87,9 @@ Native BQL parser, directive compiler, and native query evaluation.
 - Reconciliation test documents known `balance_failed` gap on `example.beancount`
   instead of a skipped equivalence test.
 
-[Unreleased]: https://github.com/beancount-ex/beancount_ex/compare/v0.5.0...HEAD
-[0.5.0]: https://github.com/beancount-ex/beancount_ex/compare/v0.4.0...v0.5.0
+[Unreleased]: https://github.com/thanos/beancount_ex/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/thanos/beancount_ex/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/thanos/beancount_ex/compare/v0.4.0...v0.5.0
 
 ## [0.4.0] - 2026-06-30
 
@@ -119,7 +117,7 @@ Full native booking parity, reconciliation harness, and performance benchmarks.
 - `compare/3` skips canned queries when both engines agree on equivalent check
   errors; no more `:deferred` return value.
 
-[0.4.0]: https://github.com/beancount-ex/beancount_ex/compare/v0.3.0...v0.4.0
+[0.4.0]: https://github.com/thanos/beancount_ex/compare/v0.3.0...v0.4.0
 
 ## [0.3.0] - 2026-06-30
 
@@ -142,7 +140,7 @@ Native parser, Elixir engine, and oracle comparison.
 - `decimal` dependency bumped to `~> 3.1` (security fix).
 - `Beancount.check_file/1` routes through the configured engine.
 
-[0.3.0]: https://github.com/beancount-ex/beancount_ex/compare/v0.2.0...v0.3.0
+[0.3.0]: https://github.com/thanos/beancount_ex/compare/v0.2.0...v0.3.0
 
 ## [0.2.0] - 2026-06-30
 
@@ -190,5 +188,5 @@ Initial pre-release establishing the compatibility layer and behavioral oracle.
 - GitHub Actions CI running format, compile (warnings as errors), Credo,
   Dialyzer, tests, property tests and docs.
 
-[0.2.0]: https://github.com/beancount-ex/beancount_ex/compare/v0.1.0-pre...v0.2.0
-[0.1.0-pre]: https://github.com/beancount-ex/beancount_ex/releases/tag/v0.1.0-pre
+[0.2.0]: https://github.com/thanos/beancount_ex/compare/v0.1.0-pre...v0.2.0
+[0.1.0-pre]: https://github.com/thanos/beancount_ex/releases/tag/v0.1.0-pre

@@ -68,4 +68,73 @@ defmodule Beancount.Engine.Elixir.ReportsTest do
 
     assert stdout =~ "unsupported native BQL"
   end
+
+  @cost_ledger [
+    Beancount.open(~D[2026-01-01], "Assets:Stocks", ["AAPL"], booking: "STRICT"),
+    Beancount.open(~D[2026-01-01], "Assets:Cash", ["USD"]),
+    Beancount.open(~D[2026-01-01], "Equity:Opening", ["USD"]),
+    Beancount.transaction(~D[2026-01-02], "*", nil, "Buy", [
+      Beancount.posting("Assets:Stocks", Decimal.new("10"), "AAPL",
+        cost: %Beancount.CostSpec{per_amount: Decimal.new("150"), per_currency: "USD"}
+      ),
+      Beancount.posting("Assets:Cash", Decimal.new("-1500"), "USD")
+    ])
+  ]
+
+  test "balances/1 formats positions held at cost" do
+    assert {:ok, %Beancount.Query.Result{rows: rows}} = Reports.balances(@cost_ledger)
+
+    stock_row = Enum.find(rows, fn [account | _] -> account == "Assets:Stocks" end)
+    assert [_, position] = stock_row
+    assert position =~ "10 AAPL"
+    assert position =~ "{ 150 USD}"
+  end
+
+  test "holdings/1 returns an empty row for an opened asset account with no net position" do
+    ledger = [
+      Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"]),
+      Beancount.open(~D[2026-01-01], "Income:Salary", ["USD"]),
+      Beancount.transaction(~D[2026-01-10], "*", nil, "In", [
+        Beancount.posting("Assets:Bank", Decimal.new("100"), "USD"),
+        Beancount.posting("Income:Salary", Decimal.new("-100"), "USD")
+      ]),
+      Beancount.transaction(~D[2026-01-20], "*", nil, "Out", [
+        Beancount.posting("Assets:Bank", Decimal.new("-100"), "USD"),
+        Beancount.posting("Income:Salary", Decimal.new("100"), "USD")
+      ])
+    ]
+
+    assert {:ok, %Beancount.Query.Result{rows: rows}} = Reports.holdings(ledger)
+    assert ["Assets:Bank", "", ""] in rows
+  end
+
+  test "run/2 journal query with an unquoted account fails closed as unsupported BQL" do
+    bql = "SELECT date, flag, payee, narration, position, balance WHERE account = Assets:Bank"
+
+    assert {:error,
+            %Beancount.Result{status: :error, normalized: %{errors: [%{message: message}]}}} =
+             Reports.run(@ledger, bql)
+
+    assert message =~ "unsupported native BQL"
+  end
+
+  test "journal/2 tolerates postings without a resolved amount or currency" do
+    txn = %Beancount.Directives.Transaction{
+      date: ~D[2026-03-01],
+      flag: "*",
+      payee: nil,
+      narration: "Elided",
+      postings: [
+        %Beancount.Directives.Posting{account: "Assets:Bank", amount: nil, currency: nil},
+        %Beancount.Directives.Posting{account: "Income:Salary", amount: nil, currency: nil}
+      ],
+      tags: [],
+      links: [],
+      metadata: %{}
+    }
+
+    assert {:ok, %Beancount.Query.Result{rows: rows}} = Reports.journal([txn], "Assets:Bank")
+    assert [["2026-03-01", "*", "", "Elided", "", balance]] = rows
+    assert balance == "0"
+  end
 end

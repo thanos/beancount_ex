@@ -104,7 +104,7 @@ defmodule Beancount.Repo.Migrations.CreateDirectives do
     create table(:beancount_customs) do
       add :date, :date, null: false
       add :type, :string
-      add :values, :map
+      add :values, {:array, :map}
       add :metadata, :map
       add :file_order, :integer
       timestamps()
@@ -127,7 +127,7 @@ defmodule Beancount.Repo.Migrations.CreateDirectives do
 
     create table(:beancount_options) do
       add :name, :string, null: false
-      add :value, :string
+      add :value, :map
       add :file_order, :integer
       timestamps()
     end
