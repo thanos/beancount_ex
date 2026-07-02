@@ -14,12 +14,28 @@ defmodule Beancount.FakeBeanQuery do
          ~s(Assets:Bank,5000 USD\r\n) <>
          ~s("Income:Salary","-5000 USD"\r\n)
 
+  # CSV rows passed to the fake script as separate printf arguments, so no shell
+  # escape processing touches the quotes inside the cells.
+  @csv_rows [
+    "account,balance",
+    "Assets:Bank,5000 USD",
+    ~s("Income:Salary","-5000 USD")
+  ]
+
   @doc "Create the fake executable and return its path."
   @spec create!() :: Path.t()
   def create! do
     dir = Path.join(System.tmp_dir!(), "fake_bean_query_#{System.unique_integer([:positive])}")
     File.mkdir_p!(dir)
     script = Path.join(dir, "bean-query")
+
+    # Cells are single-quoted literals fed to printf via a `%s\r\n` format, so
+    # only the well-defined \r and \n escapes are interpreted (portable across
+    # dash/bash). Any single quotes inside a cell are escaped for the shell.
+    rows =
+      @csv_rows
+      |> Enum.map(fn row -> "'" <> String.replace(row, "'", ~S('\'')) <> "'" end)
+      |> Enum.join(" ")
 
     File.write!(script, """
     #!/bin/sh
@@ -31,7 +47,7 @@ defmodule Beancount.FakeBeanQuery do
         exit 1
         ;;
       *)
-        printf '#{escape(@csv)}'
+        printf '%s\\r\\n' #{rows}
         exit 0
         ;;
     esac
@@ -61,10 +77,4 @@ defmodule Beancount.FakeBeanQuery do
   @doc "The CSV payload the fake emits on success."
   @spec csv() :: String.t()
   def csv, do: @csv
-
-  defp escape(text) do
-    text
-    |> String.replace("\r\n", "\\r\\n")
-    |> String.replace("\"", "\\\"")
-  end
 end

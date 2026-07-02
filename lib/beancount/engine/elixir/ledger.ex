@@ -90,6 +90,8 @@ defmodule Beancount.Engine.Elixir.Ledger do
     {expanded, Enum.reduce(errors, ledger, &add_error(&2, &1))}
   end
 
+  @spec do_expand([Beancount.directive()], String.t() | nil, MapSet.t()) ::
+          {[Beancount.directive()], [String.t()]}
   defp do_expand(directives, base, seen) do
     Enum.reduce(directives, {[], []}, fn
       %Include{path: path}, {acc, errs} ->
@@ -101,6 +103,8 @@ defmodule Beancount.Engine.Elixir.Ledger do
     end)
   end
 
+  @spec load_include(String.t(), String.t() | nil, MapSet.t()) ::
+          {[Beancount.directive()], [String.t()]}
   defp load_include(path, base, seen) do
     case resolve_include_path(path, base) do
       {:ok, resolved} ->
@@ -111,6 +115,8 @@ defmodule Beancount.Engine.Elixir.Ledger do
     end
   end
 
+  @spec expand_resolved_include(String.t(), String.t(), MapSet.t()) ::
+          {[Beancount.directive()], [String.t()]}
   defp expand_resolved_include(path, resolved, seen) do
     absolute = Path.expand(resolved)
 
@@ -121,6 +127,8 @@ defmodule Beancount.Engine.Elixir.Ledger do
     end
   end
 
+  @spec read_and_expand_include(String.t(), String.t(), MapSet.t()) ::
+          {[Beancount.directive()], [String.t()]}
   defp read_and_expand_include(path, resolved, seen) do
     with {:ok, text} <- File.read(resolved),
          {:ok, child} <- Beancount.Parser.parse_text(text) do
