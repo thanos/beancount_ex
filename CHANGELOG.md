@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-07-02
+
+Stable oracle. The native Elixir engine, BQL parser, directive compiler,
+booking engine, and oracle comparison harness have been extracted to the
+separate [`beancount_gl`](https://github.com/beancount-ex/beancount_gl)
+package.
+
+### Removed
+
+- Beancount.Engine.Elixir and all engine internals (booking, inventory,
+  validator, ledger, balance check, pad resolver, tolerance, options,
+  directive sort, posting amount, reports, fact base, index, compiled ledger,
+  error category, query engine). Moved to `beancount_gl`.
+- Beancount.BQL (BQL parser and AST). Moved to `beancount_gl`.
+- Beancount.Compare (oracle comparison harness). Moved to `beancount_gl`.
+- Beancount.Property.compare/3 and Beancount.Property.Diff. Moved to
+  `beancount_gl`.
+- `Beancount.Application` (empty supervisor).
+- Guides: `booking.md`, `reconciliation.md`, `query_engine.md`,
+  `directive_compiler.md`, `performance.md`. Moved to `beancount_gl`.
+- Benchmarks: `engine_bench.exs`, `compiler_bench.exs`, `query_bench.exs`,
+  `datalog_bench.exs`. Moved to `beancount_gl`.
+
+### Migration
+
+To use the native engine, add `beancount_gl` as a dependency and configure it:
+
+```elixir
+# mix.exs
+{:beancount_gl, "~> 0.1"}
+
+# config/config.exs
+config :beancount_ex, engine: BeancountGl.Engine.Elixir
+```
+
+Update module references:
+- Beancount.Engine.Elixir -> `BeancountGl.Engine.Elixir`
+- Beancount.Compare -> `BeancountGl.Compare`
+- Beancount.BQL -> `BeancountGl.BQL`
+- Beancount.Property.compare/3 -> `BeancountGl.Compare.compare/3`
+
 ### Fixed
 
 - Native `Ledger` now processes dated directives in Beancount date order
@@ -27,7 +68,7 @@ Native BQL parser, directive compiler, and Datalog-style query evaluation.
 
 ### Added
 
-- `Beancount.BQL` - parse and evaluate Beancount Query Language strings.
+- Beancount.BQL - parse and evaluate Beancount Query Language strings.
 - Directive compiler: `FactBase`, `Index` (ETS), `CompiledLedger`, `QueryEngine`.
 - Guides: `query_engine.md`, `directive_compiler.md`.
 - BQL parity tests (tagged `:beancount`) and `bench/compiler_bench.exs`.
@@ -54,7 +95,7 @@ Full native booking parity, reconciliation harness, and performance benchmarks.
 - Balance assertion evaluation with tolerance inference (`BalanceCheck`, `Tolerance`).
 - Pad resolution (`PadResolver`) with per-account pending pads.
 - Option processing (`Options`) for tolerance and operating currency settings.
-- Error category normalization in `Beancount.Compare.compare/3`.
+- Error category normalization in Beancount.Compare.compare/3.
 - Reconciliation harness: vendored `example.beancount` and
   `test/beancount/reconciliation_test.exs`.
 - Benchmarks under `bench/` and guides: `booking.md`, `reconciliation.md`,
@@ -81,14 +122,14 @@ Native parser, Elixir engine, and oracle comparison.
 - Public parse API: `parse/1`, `parse_text/1`, `parse_file/1`, `parse!/1`.
 - New directives: `Query`, `Plugin`, `PushTag`, `PopTag` with constructors
   `query_directive/3`, `plugin/2`, `push_tag/1`, `pop_tag/1`.
-- `Beancount.Engine.Elixir`: native structural `check/1` and canned `query/2`.
-- `Beancount.Compare.compare/3` and `Beancount.Property.Diff` for oracle ↔
+- Beancount.Engine.Elixir: native structural `check/1` and canned `query/2`.
+- Beancount.Compare.compare/3 and Beancount.Property.Diff for oracle ↔
   native equivalence within the v0.3 parity contract.
 - Guide: `guides/parsing.md`.
 
 ### Changed
 
-- `Beancount.Property.compare/3` replaces the v0.2 placeholder.
+- Beancount.Property.compare/3 replaces the v0.2 placeholder.
 - `decimal` dependency bumped to `~> 3.1` (security fix).
 - `Beancount.check_file/1` routes through the configured engine.
 

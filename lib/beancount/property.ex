@@ -9,11 +9,6 @@ if Code.ensure_loaded?(StreamData) do
 
     This module is only compiled when `StreamData` is available (the `:test`
     and `:dev` environments).
-
-    ## Oracle comparison (v0.3)
-
-    Use `Beancount.Property.compare/3` (or `Beancount.Compare.compare/3`) to
-    validate a native engine against the CLI oracle on identical input.
     """
 
     import StreamData, except: [date: 0]
@@ -173,32 +168,6 @@ if Code.ensure_loaded?(StreamData) do
         opens = Enum.map(accounts, &Beancount.open(open_date, &1, currencies))
         constant(opens ++ [txn])
       end)
-    end
-
-    @doc """
-    Compare two engines on identical input within the v0.3 parity contract.
-
-    Delegates to `Beancount.Compare.compare/3`.
-
-    ## Examples
-
-        iex> ledger = [
-        ...>   Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"]),
-        ...>   Beancount.open(~D[2026-01-01], "Income:Salary", ["USD"]),
-        ...>   Beancount.open(~D[2026-01-01], "Equity:Opening", ["USD"]),
-        ...>   Beancount.transaction(~D[2026-01-31], "*", nil, "Salary", [
-        ...>     Beancount.posting("Assets:Bank", Decimal.new("100"), "USD"),
-        ...>     Beancount.posting("Income:Salary", Decimal.new("-100"), "USD")
-        ...>   ])
-        ...> ]
-        iex> Beancount.Property.compare(Beancount.Engine.Elixir, Beancount.Engine.Elixir, ledger)
-        {:ok, :equivalent}
-
-    """
-    @spec compare(module(), module(), Beancount.directive() | binary()) ::
-            {:ok, :equivalent} | {:error, Beancount.Property.Diff.t()}
-    def compare(oracle, native, input) do
-      Beancount.Compare.compare(oracle, native, input)
     end
   end
 end

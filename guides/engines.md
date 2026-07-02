@@ -54,44 +54,29 @@ possible.
 Because `query/2` is part of the behaviour, native engines must implement it
 too - keeping the oracle contract uniform across backends.
 
-## The Elixir engine (v0.5)
+## Native engines
 
-`Beancount.Engine.Elixir` is a native engine with **golden parity** against the
-CLI oracle for check and supported BQL queries:
+A native Elixir General Ledger (`beancount_gl`) is available as a separate
+package that implements the `Beancount.Engine` behaviour with inventory
+booking, balance assertions, and native BQL queries:
 
 ```elixir
-config :beancount_ex, engine: Beancount.Engine.Elixir
+# mix.exs
+{:beancount_gl, "~> 0.1"}
+
+# config/config.exs
+config :beancount_ex, engine: BeancountGl.Engine.Elixir
 ```
 
-| Callback | v0.5 behaviour |
-|----------|----------------|
-| `render/1` | delegates to `Beancount.Renderer` |
-| `check/1` | booking, balance assertions, pad resolution, tolerance inference |
-| `query/2` | native BQL via `Beancount.BQL` and `CompiledLedger` |
-
-Supported BQL includes balances, balance sheet, income statement, holdings,
-journal queries, and `WHERE` / `GROUP BY` / `ORDER BY` with `sum(position)`,
-`units()`, and `cost()`. See `guides/query_engine.md`.
-
-For BQL constructs not yet implemented natively, use `Engine.CLI` (`bean-query`)
-as the oracle.
-
-See `guides/booking.md`, `guides/directive_compiler.md`, and
-`guides/reconciliation.md`.
+See the `beancount_gl` documentation for booking, query engine, and oracle
+comparison details.
 
 `Beancount.check_file/1` routes through the configured engine. The CLI engine
 passes the file path to `bean-check` (so `include` resolves relative to the
-file). With `Beancount.Engine.Elixir` configured, the file is read into text
-before `check/1` runs, so `include` directives are not resolved relative to
-the original path.
+file). External engines may handle files differently.
 
 ## Future engines
 
-The roadmap also includes:
-
-```
-Beancount.Engine.Rust     # native Rust (NIF/port)
-```
-
-Because they share the behaviour and the `Beancount.Result` shape, swapping
-engines requires **no changes** to `Beancount.*` callers.
+Additional engines (e.g. native Rust via NIF/port) can implement the same
+behaviour. Because they share the `Beancount.Result` shape, swapping engines
+requires **no changes** to `Beancount.*` callers.

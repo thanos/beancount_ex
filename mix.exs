@@ -1,7 +1,7 @@
 defmodule Beancount.MixProject do
   use Mix.Project
 
-  @version "0.5.0"
+  @version "1.0.0"
   @source_url "https://github.com/beancount-ex/beancount_ex"
 
   def project do
@@ -39,8 +39,7 @@ defmodule Beancount.MixProject do
 
   def application do
     [
-      extra_applications: [:logger],
-      mod: {Beancount.Application, []}
+      extra_applications: [:logger]
     ]
   end
 
@@ -57,8 +56,7 @@ defmodule Beancount.MixProject do
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
-      {:ex_doc, "~> 0.34", only: :dev, runtime: false},
-      {:benchee, "~> 1.3", only: :dev}
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false}
     ]
   end
 
@@ -81,10 +79,11 @@ defmodule Beancount.MixProject do
     [
       main: "readme",
       extras: [
+        "README.md",
         "CHANGELOG.md",
         "LICENSE",
         "guides/library.md",
-        "guides/accounting/README.md",
+        "guides/accounting/index.md",
         "guides/accounting/getting_started.md",
         "guides/accounting/in_context.md",
         "guides/accounting/cookbook.md",
@@ -96,11 +95,6 @@ defmodule Beancount.MixProject do
         "guides/querying.md",
         "guides/reporting.md",
         "guides/golden_files.md",
-        "guides/booking.md",
-        "guides/reconciliation.md",
-        "guides/query_engine.md",
-        "guides/directive_compiler.md",
-        "guides/performance.md",
         "guides/property_testing.md",
         "guides/oracle_strategy.md",
         "guides/livebook/getting_started.livemd",
@@ -111,18 +105,15 @@ defmodule Beancount.MixProject do
       groups_for_extras: [
         Accounting: ~r/guides\/(accounting\/|getting_started\.md)/,
         Library:
-          ~r/guides\/(parsing|rendering|engines|querying|reporting|golden_files|booking|reconciliation|performance|property_testing|oracle_strategy|library)\./,
+          ~r/guides\/(parsing|rendering|engines|querying|reporting|golden_files|property_testing|oracle_strategy|library)\./,
         Livebooks: ~r/guides\/livebook\//
       ],
       groups_for_modules: [
-        "Public API": [Beancount, Beancount.Parser, Beancount.Compare],
+        "Public API": [Beancount, Beancount.Parser],
         Directives: ~r/Beancount\.Directives\..*/,
         Engine: [
           Beancount.Engine,
           Beancount.Engine.CLI,
-          Beancount.Engine.Elixir,
-          Beancount.Engine.Elixir.CompiledLedger,
-          Beancount.BQL,
           Beancount.Checker,
           Beancount.Query
         ],

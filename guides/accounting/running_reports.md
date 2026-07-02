@@ -37,7 +37,7 @@ ledger = [...]  # or File.read!("ledger.bean")
 | `balance_sheet/1` | Assets, Liabilities, Equity |
 | `income_statement/1` | Income and Expenses |
 | `holdings/1` | Units and cost for asset accounts |
-| `journal/1` | Transaction history for one account |
+| `journal/2` | Transaction history for one account |
 
 ## Result shape
 
