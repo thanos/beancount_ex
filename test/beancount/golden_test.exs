@@ -68,18 +68,5 @@ defmodule Beancount.GoldenTest do
       assert {:ok, directives} = Beancount.parse_text(expected)
       assert Beancount.render(directives) == expected
     end
-
-    @tag :beancount
-    test "compare/3 oracle equivalence for #{@name}" do
-      expected = Golden.expected_bean(@case_dir)
-      assert expected != nil, "missing expected.bean; run mix beancount.golden.update"
-
-      assert {:ok, :equivalent} =
-               Beancount.Compare.compare(
-                 Beancount.Engine.CLI,
-                 Beancount.Engine.Elixir,
-                 expected
-               )
-    end
   end
 end

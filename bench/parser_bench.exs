@@ -1,4 +1,6 @@
-Mix.install([{:benchee, "~> 1.3"}])
+# Parser throughput on golden fixtures and example.beancount.
+#
+# Run: mix run bench/parser_bench.exs
 
 golden_beans =
   "test/fixtures/golden"

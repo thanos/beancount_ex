@@ -5,7 +5,7 @@ engines, testing, and oracle comparison. Use them when contributing to the
 library or swapping execution backends.
 
 If you are building an application or accounting UI, start with the
-[Accounting guides](accounting/README.md) instead.
+[Accounting guides](accounting/index.md) instead.
 
 ## Parsing and rendering
 
@@ -15,17 +15,14 @@ If you are building an application or accounting UI, start with the
 ## Execution
 
 - [Engines](engines.md) - `Beancount.Engine` behaviour, CLI vs native
-- [Booking](booking.md) - inventory booking in the native engine
 - [Querying](querying.md) - BQL and `Beancount.Query`
 - [Reporting](reporting.md) - `Beancount.Report` helpers
 
-## Quality and parity
+## Quality
 
 - [Golden files](golden_files.md) - fixture regression tests
 - [Property testing](property_testing.md) - generative ledgers
 - [Oracle strategy](oracle_strategy.md) - long-term equivalence plan
-- [Reconciliation](reconciliation.md) - `example.beancount` harness
-- [Performance](performance.md) - benchmarks
 
 ## Livebooks
 

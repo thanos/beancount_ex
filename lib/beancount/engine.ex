@@ -5,13 +5,15 @@ defmodule Beancount.Engine do
   The behaviour is the seam that lets `beancount_ex` swap its backend without
   changing the public `Beancount.*` API:
 
-      Beancount  ->  Engine.CLI    (v0.1, wraps real Beancount)
-      Beancount  ->  Engine.Elixir (future, native)
-      Beancount  ->  Engine.Rust   (future, native)
+      Beancount  ->  Engine.CLI    (default, wraps real Beancount)
+      Beancount  ->  external engine (implements the behaviour)
 
   The engine is selected via configuration:
 
       config :beancount_ex, engine: Beancount.Engine.CLI
+
+  A native Elixir General Ledger (`beancount_gl`) is available as a separate
+  package that implements this behaviour.
 
   """
 
@@ -31,7 +33,7 @@ defmodule Beancount.Engine do
 
   ## Examples
 
-  Requires `bean-check` on `PATH`, or use `Beancount.Engine.Elixir.check/1`:
+  Requires `bean-check` on `PATH`:
 
       text = "2026-01-01 open Assets:Bank USD\\n"
 
@@ -82,11 +84,13 @@ defmodule Beancount.Engine do
         Income:Salary  -100 USD
       \"\"\"
 
-      {:ok, %Beancount.Query.Result{columns: cols}} =
-        Beancount.Engine.Elixir.query(text, "SELECT account, sum(position) AS balance GROUP BY account ORDER BY account")
+      if Beancount.Query.available?() do
+        {:ok, %Beancount.Query.Result{columns: cols}} =
+          Beancount.Engine.CLI.query(text, "SELECT account, sum(position) AS balance GROUP BY account ORDER BY account")
 
-      cols
-      # => ["account", "balance"]
+        cols
+        # => ["account", "balance"]
+      end
 
   """
   @callback query(binary(), binary()) ::

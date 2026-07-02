@@ -40,8 +40,5 @@ The suite verifies the core invariants:
 - **generated ledgers declare an `open` for every account used**, and
 - (integration, tagged `:beancount`) **generated ledgers pass `bean-check`**.
 
-## Future: oracle comparison
-
-v0.3 will add an internal helper in `Beancount.Property` for asserting that a
-native engine produces equivalent normalized results to the Beancount oracle
-for identical inputs. See [Oracle Strategy](oracle_strategy.md).
+For oracle comparison (validating a native engine against the CLI), see
+[Oracle Strategy](oracle_strategy.md) and the separate `beancount_gl` package.

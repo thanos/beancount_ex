@@ -524,7 +524,7 @@ defmodule Beancount do
 
   ## Examples
 
-  With the native engine (no `bean-check` required):
+  With the configured engine:
 
       ledger = [
         Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"]),
@@ -536,7 +536,7 @@ defmodule Beancount do
       ]
 
       {:ok, %Beancount.Result{status: :ok}} =
-        ledger |> Beancount.render() |> Beancount.Engine.Elixir.check()
+        ledger |> Beancount.render() |> Beancount.check(ledger)
 
   """
   @spec check([directive()]) :: {:ok, Beancount.Result.t()} | {:error, Beancount.Result.t()}
@@ -558,7 +558,7 @@ defmodule Beancount do
         Income:Salary  -100 USD
       \"\"\"
 
-      {:ok, %Beancount.Result{status: :ok}} = Beancount.Engine.Elixir.check(text)
+      {:ok, %Beancount.Result{status: :ok}} = Beancount.check_text(text)
 
   """
   @spec check_text(binary()) :: {:ok, Beancount.Result.t()} | {:error, Beancount.Result.t()}
@@ -582,7 +582,7 @@ defmodule Beancount do
         Income:Salary  -100 USD
       \"\"\")
 
-      {:ok, %Beancount.Result{status: :ok}} = Beancount.Engine.Elixir.check_file(path)
+      {:ok, %Beancount.Result{status: :ok}} = Beancount.check_file(path)
 
   """
   @spec check_file(Path.t()) :: {:ok, Beancount.Result.t()} | {:error, Beancount.Result.t()}
@@ -614,7 +614,7 @@ defmodule Beancount do
       bql = "SELECT account, sum(position) AS balance GROUP BY account ORDER BY account"
 
       {:ok, %Beancount.Query.Result{columns: columns}} =
-        ledger |> Beancount.render() |> then(&Beancount.Engine.Elixir.query(&1, bql))
+        ledger |> Beancount.render() |> then(&Beancount.query_text(&1, bql))
 
       columns
       # => ["account", "balance"]
@@ -641,7 +641,7 @@ defmodule Beancount do
       \"\"\"
 
       {:ok, result} =
-        Beancount.Engine.Elixir.query(text, "SELECT account, sum(position) GROUP BY account")
+        Beancount.query_text(text, "SELECT account, sum(position) GROUP BY account")
 
       result.columns
       # => ["account", "balance"]
@@ -670,7 +670,7 @@ defmodule Beancount do
       \"\"\")
 
       {:ok, _} =
-        Beancount.Engine.Elixir.query(File.read!(path), "SELECT account GROUP BY account")
+        Beancount.query_text(File.read!(path), "SELECT account GROUP BY account")
 
   """
   @spec query_file(Path.t(), binary()) :: query_return()
@@ -696,7 +696,7 @@ defmodule Beancount do
       ]
 
       {:ok, %Beancount.Query.Result{}} =
-        ledger |> Beancount.render() |> then(&Beancount.Engine.Elixir.query(&1, "SELECT account, sum(position) GROUP BY account"))
+        ledger |> Beancount.render() |> then(&Beancount.query_text(&1, "SELECT account, sum(position) GROUP BY account"))
 
   """
   @spec balances([directive()] | binary()) :: query_return()

@@ -10,7 +10,7 @@ run reports. This guide is the entry point for the **accounting** track; see
 ```elixir
 def deps do
   [
-    {:beancount_ex, "~> 0.4"},
+    {:beancount_ex, "~> 1.0"},
     # optional: Explorer DataFrames for report tables in Livebook or Phoenix
     {:explorer, "~> 0.11"}
   ]

@@ -5,7 +5,7 @@ native engine.
 
 ```elixir
 Mix.install([
-  {:beancount_ex, "~> 0.4"},
+  {:beancount_ex, "~> 1.0"},
   {:kino, "~> 0.13"}
 ])
 

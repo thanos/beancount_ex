@@ -12,24 +12,24 @@ defprotocol Beancount.Directive do
   Elixir struct shape, and fields. See the
   [Beancount language syntax](https://beancount.github.io/docs/beancount_language_syntax/#directives_1).
 
-    * `Beancount.Directives.Open` — `open`
-    * `Beancount.Directives.Close` — `close`
-    * `Beancount.Directives.Commodity` — `commodity`
-    * `Beancount.Directives.Transaction` — `*` / `txn` transactions
-    * `Beancount.Directives.Posting` — transaction legs
-    * `Beancount.Directives.Balance` — `balance`
-    * `Beancount.Directives.Pad` — `pad`
-    * `Beancount.Directives.Note` — `note`
-    * `Beancount.Directives.Document` — `document`
-    * `Beancount.Directives.Price` — `price`
-    * `Beancount.Directives.Event` — `event`
-    * `Beancount.Directives.Query` — `query`
-    * `Beancount.Directives.Custom` — `custom`
-    * `Beancount.Directives.Option` — `option`
-    * `Beancount.Directives.Include` — `include`
-    * `Beancount.Directives.Plugin` — `plugin`
-    * `Beancount.Directives.PushTag` — `pushtag`
-    * `Beancount.Directives.PopTag` — `poptag`
+    * `Beancount.Directives.Open` - `open`
+    * `Beancount.Directives.Close` - `close`
+    * `Beancount.Directives.Commodity` - `commodity`
+    * `Beancount.Directives.Transaction` - `*` / `txn` transactions
+    * `Beancount.Directives.Posting` - transaction legs
+    * `Beancount.Directives.Balance` - `balance`
+    * `Beancount.Directives.Pad` - `pad`
+    * `Beancount.Directives.Note` - `note`
+    * `Beancount.Directives.Document` - `document`
+    * `Beancount.Directives.Price` - `price`
+    * `Beancount.Directives.Event` - `event`
+    * `Beancount.Directives.Query` - `query`
+    * `Beancount.Directives.Custom` - `custom`
+    * `Beancount.Directives.Option` - `option`
+    * `Beancount.Directives.Include` - `include`
+    * `Beancount.Directives.Plugin` - `plugin`
+    * `Beancount.Directives.PushTag` - `pushtag`
+    * `Beancount.Directives.PopTag` - `poptag`
 
   Prefer `Beancount.open/4`, `Beancount.transaction/6`, and the other
   constructor functions in `Beancount` when building ledgers programmatically.

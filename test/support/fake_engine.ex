@@ -7,6 +7,27 @@ defmodule Beancount.FakeEngine do
     Agent.start_link(fn -> [] end, name: __MODULE__)
   end
 
+  def ensure! do
+    case start_link() do
+      {:ok, _} -> :ok
+      {:error, {:already_started, _}} -> :ok
+    end
+
+    try do
+      reset!()
+    catch
+      :exit, _ ->
+        case start_link() do
+          {:ok, _} -> :ok
+          {:error, {:already_started, _}} -> :ok
+        end
+
+        reset!()
+    end
+
+    :ok
+  end
+
   def calls, do: Agent.get(__MODULE__, & &1)
 
   def reset!, do: Agent.update(__MODULE__, fn _ -> [] end)

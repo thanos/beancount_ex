@@ -68,18 +68,6 @@ defmodule Beancount.PropertyTest do
     end
   end
 
-  test "compare/3 reports equivalent engines as equivalent" do
-    assert {:ok, :equivalent} =
-             Property.compare(Beancount.Engine.Elixir, Beancount.Engine.Elixir, [
-               Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"]),
-               Beancount.open(~D[2026-01-01], "Income:Salary", ["USD"]),
-               Beancount.transaction(~D[2026-01-31], "*", "Employer", "Salary", [
-                 Beancount.posting("Assets:Bank", Decimal.new("5000"), "USD"),
-                 Beancount.posting("Income:Salary", Decimal.new("-5000"), "USD")
-               ])
-             ])
-  end
-
   property "parse(render(d)) recovers equivalent directives for generated ledgers" do
     check all(ledger <- Property.ledger()) do
       text = Beancount.render(ledger)

@@ -5,7 +5,7 @@
 > [Parsing (Livebook)](livebook/parsing.livemd). This page documents the
 > library implementation.
 
-v0.3 adds `Beancount.Parser`, a native NimbleParsec-based parser that turns
+`Beancount.Parser` is, a native NimbleParsec-based parser that turns
 `.bean` text into the same typed directive structs you build with the public
 `Beancount.*` constructors.
 
