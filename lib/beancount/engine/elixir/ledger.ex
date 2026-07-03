@@ -39,6 +39,7 @@ defmodule Beancount.Engine.Elixir.Ledger do
             errors: []
 
   @type t :: %__MODULE__{}
+  @type seen_includes :: %{optional(String.t()) => true}
 
   @spec new(keyword()) :: t()
   def new(opts \\ []) do
@@ -82,15 +83,15 @@ defmodule Beancount.Engine.Elixir.Ledger do
   defp expand_includes(directives, ledger) do
     seen =
       case ledger.include_base do
-        nil -> MapSet.new()
-        base -> MapSet.new([Path.expand(base)])
+        nil -> %{}
+        base -> %{Path.expand(base) => true}
       end
 
     {expanded, errors} = do_expand(directives, ledger.include_base, seen)
     {expanded, Enum.reduce(errors, ledger, &add_error(&2, &1))}
   end
 
-  @spec do_expand([Beancount.directive()], String.t() | nil, MapSet.t()) ::
+  @spec do_expand([Beancount.directive()], String.t() | nil, seen_includes()) ::
           {[Beancount.directive()], [String.t()]}
   defp do_expand(directives, base, seen) do
     Enum.reduce(directives, {[], []}, fn
@@ -103,7 +104,7 @@ defmodule Beancount.Engine.Elixir.Ledger do
     end)
   end
 
-  @spec load_include(String.t(), String.t() | nil, MapSet.t()) ::
+  @spec load_include(String.t(), String.t() | nil, seen_includes()) ::
           {[Beancount.directive()], [String.t()]}
   defp load_include(path, base, seen) do
     case resolve_include_path(path, base) do
@@ -115,19 +116,19 @@ defmodule Beancount.Engine.Elixir.Ledger do
     end
   end
 
-  @spec expand_resolved_include(String.t(), String.t(), MapSet.t()) ::
+  @spec expand_resolved_include(String.t(), String.t(), seen_includes()) ::
           {[Beancount.directive()], [String.t()]}
   defp expand_resolved_include(path, resolved, seen) do
     absolute = Path.expand(resolved)
 
-    if MapSet.member?(seen, absolute) do
+    if Map.has_key?(seen, absolute) do
       {[], ["Include cycle detected for #{path}"]}
     else
-      read_and_expand_include(path, resolved, MapSet.put(seen, absolute))
+      read_and_expand_include(path, resolved, Map.put(seen, absolute, true))
     end
   end
 
-  @spec read_and_expand_include(String.t(), String.t(), MapSet.t()) ::
+  @spec read_and_expand_include(String.t(), String.t(), seen_includes()) ::
           {[Beancount.directive()], [String.t()]}
   defp read_and_expand_include(path, resolved, seen) do
     with {:ok, text} <- File.read(resolved),
