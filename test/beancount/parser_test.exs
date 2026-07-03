@@ -34,6 +34,13 @@ defmodule Beancount.ParserTest do
     assert is_integer(line)
   end
 
+  test "parse_text/1 returns structured error for invalid calendar dates" do
+    assert {:error, %Beancount.Parser.Error{message: message, line: 1}} =
+             Beancount.parse_text("2026-02-30 open Assets:Bank USD\n")
+
+    assert message =~ "invalid date"
+  end
+
   test "parse_text/1 parses query, plugin, and tag directives" do
     text = """
     2026-01-01 query "balances" "SELECT account"

@@ -4,11 +4,7 @@ defmodule Beancount.EngineTest do
   alias Beancount.Engine
 
   setup do
-    unless Process.whereis(Beancount.FakeEngine) do
-      {:ok, _} = Beancount.FakeEngine.start_link()
-    end
-
-    Beancount.FakeEngine.reset!()
+    Beancount.FakeEngine.ensure!()
     :ok
   end
 
@@ -56,7 +52,7 @@ defmodule Beancount.EngineTest do
     assert {:ok, %Beancount.Query.Result{status: :ok}} =
              Beancount.FakeEngine.query("ledger", "SELECT account")
 
-    assert [{:check, :text}] = Beancount.FakeEngine.calls()
+    assert [{:query, :text}, {:check, :text}] = Beancount.FakeEngine.calls()
   end
 
   test "FakeEngine start_link/0 returns already_started when running" do

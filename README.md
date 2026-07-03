@@ -1,48 +1,48 @@
 # beancount_ex
 
-
-
-
 [![Hex.pm Version](https://img.shields.io/hexpm/v/beancount_ex.svg)](https://hex.pm/packages/beancount_ex)
 [![HexDocs](https://img.shields.io/badge/docs-hexdocs-blue.svg)](https://hexdocs.pm/beancount_ex)
 [![Hex.pm License](https://img.shields.io/hexpm/l/beancount_ex.svg)](https://hex.pm/packages/beancount_ex)
 [![CI](https://github.com/thanos/beancount_ex/actions/workflows/ci.yml/badge.svg)](https://github.com/thanos/beancount_ex/actions/workflows/ci.yml)
 [![Coverage](https://coveralls.io/repos/github/thanos/beancount_ex/badge.svg?branch=main)](https://coveralls.io/github/thanos/beancount_ex)
 
-
 An idiomatic Elixir interface to [Beancount](https://beancount.github.io/).
 
-> **`beancount_ex` is not a General Ledger.** It is a compatibility layer and a
-> long-term *behavioral oracle* for a future native Elixir General Ledger.
-
-`beancount_ex` lets you build Beancount directives as typed Elixir structs,
-render them to deterministic `.bean` text, validate them, and run BQL queries /
-reports through a configurable engine. Today that engine wraps the real
-Beancount toolchain (`bean-check`, `bean-query`). Tomorrow a native Elixir (and
-later Rust) engine can replace it **without changing the public API**.
+> **`beancount_ex` is not a General Ledger.** It is a compatibility layer and
+> *behavioral oracle*: it constructs Beancount directives as typed Elixir
+> structs, renders them to deterministic `.bean` text, and validates them
+> through a configurable engine. The default engine wraps real Beancount
+> (`bean-check` / `bean-query`); the native `Beancount.Engine.Elixir` can
+> replace it **without changing the public API**. Optional Ecto storage
+> (`Beancount.Storage`) persists directives to SQLite when you need it.
 
 ## Why this library exists
 
-A future native Elixir General Ledger needs something trustworthy to be
-validated against. Beancount is a mature, battle-tested double-entry accounting
-system. By wrapping it behind a stable Elixir API, `beancount_ex`:
+A native Elixir General Ledger needs something trustworthy to be validated
+against. Beancount is a mature, battle-tested double-entry accounting system.
+By wrapping it behind a stable Elixir API, `beancount_ex`:
 
 - gives applications an idiomatic way to construct and check ledgers today, and
-- becomes the **oracle** that a native engine must agree with tomorrow.
+- becomes the **oracle** that the native engine must agree with.
 
 ```
                  Public API: Beancount.*
-                          │
-            ┌─────────────┴─────────────┐
-            ▼                           ▼
+                          |
+            +-------------+-------------+
+            v                           v
       Directive DSL              Engine Behaviour
-            │                           │
-            ▼                           ▼
+            |                           |
+            v                           v
         Renderer               Beancount.Engine
-                                        │
-                        ┌───────────────┴───────────────┐
-                        ▼                               ▼
-              Engine.CLI (default)            Engine.Elixir (v0.4, opt-in)
+            |                  +--------+--------+
+            |                  v                 v
+            |             Engine.CLI      Engine.Elixir
+            |             (bean-check)    (native booking)
+            |
+            v  (opt-in)
+        Ecto Storage
+        (SQLite/Postgres)
+        Storage / Queries
 ```
 
 ## Installation
@@ -50,7 +50,7 @@ system. By wrapping it behind a stable Elixir API, `beancount_ex`:
 ```elixir
 def deps do
   [
-    {:beancount_ex, "~> 0.4"},
+    {:beancount_ex, "~> 0.6"},
     # optional: Explorer DataFrames for report tables (see guides/accounting/running_reports.md)
     {:explorer, "~> 0.11"}
   ]
@@ -104,6 +104,11 @@ bean = Beancount.render(ledger)
 
 # Optional: Explorer DataFrame (requires {:explorer, "~> 0.11"})
 # df = Beancount.Explorer.to_dataframe(balances)
+
+# Optional: persist directives to the built-in SQLite store
+{:ok, 3} = Beancount.Storage.store(ledger)
+loaded = Beancount.Storage.load()
+Beancount.Queries.list_opens(prefix: "Assets")
 ```
 
 The public API is `Beancount`. There is intentionally **no** public
@@ -134,9 +139,9 @@ mix beancount.golden.update   # regenerate golden fixtures
 
 ### Accounting (build a UI or ledger)
 
-For programmers and LLMs building accounting features:
+For programmers building accounting features:
 
-- [Accounting guides index](guides/accounting/README.md)
+- [Accounting guides index](guides/accounting/index.md)
 - [Getting started](guides/accounting/getting_started.md)
 - [In context](guides/accounting/in_context.md)
 - [Cookbook](guides/accounting/cookbook.md)
@@ -147,8 +152,9 @@ For programmers and LLMs building accounting features:
 
 - [Library guides index](guides/library.md)
 - [Parsing](guides/parsing.md), [Rendering](guides/rendering.md), [Engines](guides/engines.md)
-- [Querying](guides/querying.md), [Reporting](guides/reporting.md), [Booking](guides/booking.md)
-- [Golden files](guides/golden_files.md), [Property testing](guides/property_testing.md), [Oracle strategy](guides/oracle_strategy.md)
+- [Querying](guides/querying.md), [Queries](guides/queries.md), [Reporting](guides/reporting.md), [Booking](guides/booking.md)
+- [Storage](guides/storage.md), [Golden files](guides/golden_files.md), [Property testing](guides/property_testing.md)
+- [Oracle strategy](guides/oracle_strategy.md), [Reconciliation](guides/reconciliation.md), [Performance](guides/performance.md)
 
 ## License
 

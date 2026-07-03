@@ -2,7 +2,7 @@
 
 ```elixir
 Mix.install([
-  {:beancount_ex, "~> 0.4"},
+  {:beancount_ex, "~> 0.6"},
   {:kino, "~> 0.13"}
 ])
 ```
@@ -31,8 +31,9 @@ IO.puts(Beancount.render(ledger))
 
 ## Check the ledger
 
-With the default CLI engine you need `pip install beancount`. The native engine
-works without it:
+With the default CLI engine you need `pip install beancount beanquery` (the
+latter provides `bean-query` for reports). The native engine works without
+Python tooling:
 
 ```elixir
 # Optional: use native validation (booking, balance assertions, pad)

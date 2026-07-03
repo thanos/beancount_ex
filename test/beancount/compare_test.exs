@@ -2,30 +2,11 @@ defmodule Beancount.CompareTest do
   use ExUnit.Case, async: false
 
   setup do
-    case Beancount.FakeEngine.start_link() do
-      {:ok, _} -> :ok
-      {:error, {:already_started, _}} -> :ok
-    end
-
-    try do
-      Beancount.FakeEngine.reset!()
-    catch
-      :exit, _ ->
-        {:ok, _} = Beancount.FakeEngine.start_link()
-        Beancount.FakeEngine.reset!()
-    end
-
+    Beancount.FakeEngine.ensure!()
     :ok
   end
 
-  @ledger [
-    Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"]),
-    Beancount.open(~D[2026-01-01], "Income:Salary", ["USD"]),
-    Beancount.transaction(~D[2026-01-31], "*", "Employer", "Salary", [
-      Beancount.posting("Assets:Bank", Decimal.new("5000"), "USD"),
-      Beancount.posting("Income:Salary", Decimal.new("-5000"), "USD")
-    ])
-  ]
+  @ledger Beancount.TestFixtures.salary_ledger()
 
   test "compare/3 reports equivalent engines as equivalent" do
     assert {:ok, :equivalent} =
@@ -90,12 +71,48 @@ defmodule Beancount.CompareTest do
     assert message =~ "check"
   end
 
+  test "compare/3 normalizes equivalent query rows with different lot formatting" do
+    ledger = Beancount.render(@ledger)
+
+    assert {:ok, :equivalent} =
+             Beancount.Compare.compare(
+               Beancount.CompareTest.QueryFormatA,
+               Beancount.CompareTest.QueryFormatB,
+               ledger
+             )
+  end
+
+  test "compare/3 normalizes merged cost lots and zero positions" do
+    stocks_ledger = [
+      Beancount.open(~D[2026-01-01], "Assets:Stocks", ["AAPL"]),
+      Beancount.open(~D[2026-01-01], "Equity:Opening", ["USD"])
+    ]
+
+    assert {:ok, :equivalent} =
+             Beancount.Compare.compare(
+               Beancount.CompareTest.PositionLotsA,
+               Beancount.CompareTest.PositionLotsB,
+               stocks_ledger
+             )
+  end
+
   test "compare/3 ignores bean-check context lines in other_errors" do
     ledger = Beancount.render(@ledger)
 
     assert {:ok, :equivalent} =
              Beancount.Compare.compare(
                Beancount.CompareTest.CLIContextOracle,
+               Beancount.CompareTest.CLIContextNative,
+               ledger
+             )
+  end
+
+  test "compare/3 treats uncategorized errors on one side as non-equivalent" do
+    ledger = Beancount.render(@ledger)
+
+    assert {:error, %Beancount.Property.Diff{callback: :check}} =
+             Beancount.Compare.compare(
+               Beancount.CompareTest.OtherErrorA,
                Beancount.CompareTest.CLIContextNative,
                ledger
              )
@@ -123,7 +140,7 @@ defmodule Beancount.CompareTest do
              )
   end
 
-  test "compare/3 reports query failures from an engine" do
+  test "compare/3 reports query failures from an engine (both directions)" do
     assert {:error, %Beancount.Property.Diff{callback: :query, message: "query failed"}} =
              Beancount.Compare.compare(
                Beancount.BrokenQueryEngine,
@@ -136,6 +153,17 @@ defmodule Beancount.CompareTest do
                Beancount.Engine.Elixir,
                Beancount.BrokenQueryEngine,
                @ledger
+             )
+  end
+
+  test "compare/3 normalizes unique non-position cells" do
+    stocks_ledger = [Beancount.open(~D[2026-01-01], "Assets:Stocks", ["AAPL"])]
+
+    assert {:ok, :equivalent} =
+             Beancount.Compare.compare(
+               Beancount.CompareTest.UniqueCellA,
+               Beancount.CompareTest.UniqueCellB,
+               stocks_ledger
              )
   end
 
@@ -154,160 +182,75 @@ defmodule Beancount.CompareTest do
     assert {:error, %Beancount.Result{status: :error}} =
              Beancount.BrokenQueryEngine.query("ledger", "SELECT account")
   end
-end
 
-defmodule Beancount.CompareTest.CLIContextOracle do
-  @behaviour Beancount.Engine
+  describe "position cell normalization" do
+    # These test the private normalize_position_cell/1 indirectly via
+    # compare/3 with stub engines that produce specific query results.
 
-  @impl true
-  def render(_directives), do: ""
+    test "plain amount normalizes decimal scale" do
+      # 5000.00 USD and 5000 USD should be equivalent
+      assert {:ok, :equivalent} =
+               Beancount.Compare.compare(
+                 Beancount.CompareTest.PlainAmountA,
+                 Beancount.CompareTest.PlainAmountB,
+                 Beancount.render(@ledger)
+               )
+    end
 
-  @impl true
-  def check(_text) do
-    {:error,
-     %Beancount.Result{
-       status: :error,
-       normalized: %{
-         status: :error,
-         errors: [
-           %{line: 3, message: "Balance failed for 'Assets:Foo': expected 2 USD"},
-           %{line: nil, message: "2026-01-01 balance Assets:Foo  2 USD"},
-           %{line: nil, message: "Assets:Cash    10 USD"}
-         ]
-       }
-     }}
+    test "zero-balance cells are dropped" do
+      assert {:ok, :equivalent} =
+               Beancount.Compare.compare(
+                 Beancount.CompareTest.ZeroBalanceA,
+                 Beancount.CompareTest.ZeroBalanceB,
+                 Beancount.render(@ledger)
+               )
+    end
+
+    test "cost lots at same commodity and cost merge" do
+      assert {:ok, :equivalent} =
+               Beancount.Compare.compare(
+                 Beancount.CompareTest.CostLotA,
+                 Beancount.CompareTest.CostLotB,
+                 Beancount.render(@ledger)
+               )
+    end
   end
 
-  @impl true
-  def check_file(_path), do: check("")
+  @stub_modules [
+    Beancount.CompareTest.UniqueCellA,
+    Beancount.CompareTest.UniqueCellB,
+    Beancount.CompareTest.PositionLotsA,
+    Beancount.CompareTest.PositionLotsB,
+    Beancount.CompareTest.QueryFormatA,
+    Beancount.CompareTest.QueryFormatB,
+    Beancount.CompareTest.CLIContextOracle,
+    Beancount.CompareTest.CLIContextNative,
+    Beancount.CompareTest.OtherErrorA,
+    Beancount.CompareTest.OtherErrorB,
+    Beancount.CompareTest.BookingInsufficientCLI,
+    Beancount.CompareTest.BookingInsufficientNative,
+    Beancount.CompareTest.PlainAmountA,
+    Beancount.CompareTest.PlainAmountB,
+    Beancount.CompareTest.ZeroBalanceA,
+    Beancount.CompareTest.ZeroBalanceB,
+    Beancount.CompareTest.CostLotA,
+    Beancount.CompareTest.CostLotB
+  ]
 
-  @impl true
-  def query(_text, _bql),
-    do: {:ok, %Beancount.Query.Result{columns: [], rows: [], raw: "", status: :ok}}
-end
+  test "compare stub engines implement the full Beancount.Engine behaviour" do
+    for module <- @stub_modules do
+      assert module.render([]) == ""
 
-defmodule Beancount.CompareTest.CLIContextNative do
-  @behaviour Beancount.Engine
+      result = module.check_file("/tmp/ledger.bean")
 
-  @impl true
-  def render(_directives), do: ""
+      assert match?({:ok, %Beancount.Result{}}, result) or
+               match?({:error, %Beancount.Result{status: :error}}, result)
 
-  @impl true
-  def check(_text) do
-    {:error,
-     %Beancount.Result{
-       status: :error,
-       normalized: %{
-         status: :error,
-         errors: [%{line: 3, message: "Balance failed for 'Assets:Foo': expected 2 USD"}]
-       }
-     }}
-  end
+      assert {:ok, %Beancount.Query.Result{columns: columns, rows: rows}} =
+               module.query("ledger", "SELECT account, balance")
 
-  @impl true
-  def check_file(_path), do: check("")
-
-  @impl true
-  def query(_text, _bql),
-    do: {:ok, %Beancount.Query.Result{columns: [], rows: [], raw: "", status: :ok}}
-end
-
-defmodule Beancount.CompareTest.OtherErrorA do
-  @behaviour Beancount.Engine
-
-  @impl true
-  def render(_directives), do: ""
-
-  @impl true
-  def check(_text), do: other_error("alpha unknown failure")
-
-  @impl true
-  def check_file(_path), do: check("")
-
-  @impl true
-  def query(_text, _bql),
-    do: {:ok, %Beancount.Query.Result{columns: [], rows: [], raw: "", status: :ok}}
-
-  defp other_error(message) do
-    {:error,
-     %Beancount.Result{
-       status: :error,
-       normalized: %{status: :error, errors: [%{line: nil, message: message}]}
-     }}
-  end
-end
-
-defmodule Beancount.CompareTest.OtherErrorB do
-  @behaviour Beancount.Engine
-
-  @impl true
-  def render(_directives), do: ""
-
-  @impl true
-  def check(_text), do: other_error("beta unknown failure")
-
-  @impl true
-  def check_file(_path), do: check("")
-
-  @impl true
-  def query(_text, _bql),
-    do: {:ok, %Beancount.Query.Result{columns: [], rows: [], raw: "", status: :ok}}
-
-  defp other_error(message) do
-    {:error,
-     %Beancount.Result{
-       status: :error,
-       normalized: %{status: :error, errors: [%{line: nil, message: message}]}
-     }}
-  end
-end
-
-defmodule Beancount.CompareTest.BookingInsufficientCLI do
-  @behaviour Beancount.Engine
-
-  @impl true
-  def render(_directives), do: ""
-
-  @impl true
-  def check(_text), do: booking_error("Not enough lots to reduce")
-
-  @impl true
-  def check_file(_path), do: check("")
-
-  @impl true
-  def query(_text, _bql),
-    do: {:ok, %Beancount.Query.Result{columns: [], rows: [], raw: "", status: :ok}}
-
-  defp booking_error(message) do
-    {:error,
-     %Beancount.Result{
-       status: :error,
-       normalized: %{status: :error, errors: [%{line: 1, message: message}]}
-     }}
-  end
-end
-
-defmodule Beancount.CompareTest.BookingInsufficientNative do
-  @behaviour Beancount.Engine
-
-  @impl true
-  def render(_directives), do: ""
-
-  @impl true
-  def check(_text), do: booking_error("Insufficient units for reduction")
-
-  @impl true
-  def check_file(_path), do: check("")
-
-  @impl true
-  def query(_text, _bql),
-    do: {:ok, %Beancount.Query.Result{columns: [], rows: [], raw: "", status: :ok}}
-
-  defp booking_error(message) do
-    {:error,
-     %Beancount.Result{
-       status: :error,
-       normalized: %{status: :error, errors: [%{line: 1, message: message}]}
-     }}
+      assert is_list(columns)
+      assert is_list(rows)
+    end
   end
 end

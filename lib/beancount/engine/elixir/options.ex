@@ -3,7 +3,23 @@ defmodule Beancount.Engine.Elixir.Options do
 
   alias Beancount.Directives.Option
 
+  # Option names Beancount recognizes. Unknown names are rejected (parity with
+  # bean-check), even though only a subset changes native-engine behavior.
+  @known_options ~w(
+    title name_assets name_liabilities name_equity name_income name_expenses
+    account_previous_balances account_previous_earnings account_previous_conversions
+    account_current_earnings account_current_conversions account_unrealized_gains
+    account_rounding conversion_currency inferred_tolerance_default
+    inferred_tolerance_multiplier infer_tolerance_from_cost tolerance
+    default_tolerance tolerance_multiplier use_legacy_fixed_tolerances documents
+    operating_currency render_commas plugin_processing_mode plugin
+    long_string_maxlines booking_method insert_pythonpath
+    allow_deprecated_none_for_tags_and_links allow_pipe_separator
+  )
+
   @enforce_keys []
+  # `operating_currency` is captured for round-trip/introspection but is not yet
+  # consumed by any native report or check (reserved for future reporting).
   defstruct operating_currency: nil,
             inferred_tolerance_default: nil,
             inferred_tolerance_multiplier: Decimal.new(1),
@@ -83,7 +99,14 @@ defmodule Beancount.Engine.Elixir.Options do
   end
 
   defp validate_and_put(options, "title", _value), do: {:ok, options}
-  defp validate_and_put(options, _name, _value), do: {:ok, options}
+
+  defp validate_and_put(options, name, _value) do
+    if name in @known_options do
+      {:ok, options}
+    else
+      {:error, "Invalid option: '#{name}'"}
+    end
+  end
 
   defp parse_tolerance_value(value) do
     case String.split(value, " ", parts: 2) do

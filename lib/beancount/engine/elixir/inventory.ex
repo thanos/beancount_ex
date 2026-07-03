@@ -78,13 +78,57 @@ defmodule Beancount.Engine.Elixir.Inventory do
   end
 
   defp add_lot(inventory, account, posting) do
+    cost = lot_cost(posting)
+
     lot = %Lot{
       units: posting.amount,
       currency: posting.currency,
-      cost: lot_cost(posting)
+      cost: cost
     }
 
-    update_lots(inventory, account, posting.currency, fn lots -> lots ++ [lot] end)
+    combine =
+      if merge_lot?(cost) do
+        fn lots -> merge_into_lots(lots, lot) end
+      else
+        fn lots -> lots ++ [lot] end
+      end
+
+    update_lots(inventory, account, posting.currency, combine)
+  end
+
+  defp merge_lot?(%CostSpec{merge: true}), do: true
+  defp merge_lot?(_), do: false
+
+  # `{*}` merge: consolidate all existing merge lots (same currency) with the new
+  # deposit into a single lot held at the running average cost.
+  defp merge_into_lots(lots, new_lot) do
+    {mergeable, others} = Enum.split_with(lots, &merge_lot?(&1.cost))
+    combined = Enum.reduce(mergeable, new_lot, fn lot, acc -> combine_average(acc, lot) end)
+    others ++ [combined]
+  end
+
+  defp combine_average(%Lot{} = a, %Lot{} = b) do
+    units = Decimal.add(a.units, b.units)
+    {basis_a, currency} = lot_cost_basis(a)
+    {basis_b, _} = lot_cost_basis(b)
+    total_basis = Decimal.add(basis_a, basis_b)
+
+    per =
+      if Decimal.equal?(units, 0),
+        do: Decimal.new(0),
+        else: Decimal.div(total_basis, units)
+
+    %Lot{
+      units: units,
+      currency: a.currency,
+      cost: %{
+        a.cost
+        | per_amount: per,
+          per_currency: currency,
+          total_amount: nil,
+          total_currency: nil
+      }
+    }
   end
 
   defp update_lots(inventory, account, currency, fun) do

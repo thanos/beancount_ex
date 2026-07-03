@@ -113,9 +113,14 @@ defmodule Beancount.Parser.Grammar do
   defp parse_dated(line, rest, line_no) do
     case Regex.run(@date_regex, line) do
       [_, date_text] ->
-        {:ok, date} = Date.from_iso8601(date_text)
-        remainder = line |> String.replace_prefix(date_text, "") |> String.trim_leading()
-        parse_dated_body(date, remainder, rest, line_no)
+        case Date.from_iso8601(date_text) do
+          {:ok, date} ->
+            remainder = line |> String.replace_prefix(date_text, "") |> String.trim_leading()
+            parse_dated_body(date, remainder, rest, line_no)
+
+          {:error, _reason} ->
+            {:error, error("invalid date #{date_text}", line_no, 1)}
+        end
 
       _ ->
         {:error, error("expected dated directive", line_no, 1)}
@@ -442,13 +447,13 @@ defmodule Beancount.Parser.Grammar do
     end
   end
 
-  defp collect_multiline_quoted([], _line_no, _acc) do
-    {:error, error("unterminated query string", 0, 1)}
+  defp collect_multiline_quoted([], line_no, _acc) do
+    {:error, error("unterminated query string", line_no, 1)}
   end
 
   defp parse_transaction(date, flag, rest_line, rest, line_no, opts) do
     {tags, links, header} = extract_tags_links(rest_line)
-    {metadata_lines, posting_lines, rest, next_line} = collect_transaction_body(rest, line_no)
+    {metadata_lines, posting_lines, rest, next_line} = collect_transaction_body(rest, line_no + 1)
 
     with {:ok, payee, narration} <- parse_payee_narration(header, opts),
          {:ok, txn_metadata} <- parse_metadata(metadata_lines, opts),
@@ -483,7 +488,7 @@ defmodule Beancount.Parser.Grammar do
         {Enum.reverse(metadata), Enum.reverse(postings), tail, line_no + 1}
 
       posting_line?(line) ->
-        collect_transaction_body(tail, line_no + 1, metadata, [{line, []} | postings])
+        collect_transaction_body(tail, line_no + 1, metadata, [{line, line_no, []} | postings])
 
       metadata_line?(line) ->
         collect_transaction_metadata(line, tail, line_no, metadata, postings)
@@ -495,9 +500,9 @@ defmodule Beancount.Parser.Grammar do
 
   defp collect_transaction_metadata(line, tail, line_no, metadata, postings) do
     case postings do
-      [{posting_line, posting_meta} | rest_postings] ->
+      [{posting_line, posting_line_no, posting_meta} | rest_postings] ->
         collect_transaction_body(tail, line_no + 1, metadata, [
-          {posting_line, [line | posting_meta]} | rest_postings
+          {posting_line, posting_line_no, [line | posting_meta]} | rest_postings
         ])
 
       [] ->
@@ -549,11 +554,11 @@ defmodule Beancount.Parser.Grammar do
   end
 
   defp parse_postings(items, opts) do
-    Enum.reduce_while(items, {:ok, []}, fn {line, metadata_lines}, {:ok, acc} ->
-      line_opts = Keyword.put(opts, :line, opts[:line])
+    Enum.reduce_while(items, {:ok, []}, fn {line, line_no, metadata_lines}, {:ok, acc} ->
+      line_opts = Keyword.put(opts, :line, line_no)
 
       with {:ok, posting} <- Posting.parse_line(line, line_opts),
-           {:ok, metadata} <- parse_metadata(metadata_lines, opts) do
+           {:ok, metadata} <- parse_metadata(metadata_lines, line_opts) do
         {:cont, {:ok, [%{posting | metadata: metadata} | acc]}}
       else
         {:error, _} = err -> {:halt, err}

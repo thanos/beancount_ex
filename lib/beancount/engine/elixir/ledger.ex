@@ -10,11 +10,14 @@ defmodule Beancount.Engine.Elixir.Ledger do
     Open,
     Option,
     Pad,
+    PopTag,
+    PushTag,
     Transaction
   }
 
   alias Beancount.Engine.Elixir.{
     BalanceCheck,
+    DirectiveSort,
     Inventory,
     Options,
     PadResolver,
@@ -36,6 +39,7 @@ defmodule Beancount.Engine.Elixir.Ledger do
             errors: []
 
   @type t :: %__MODULE__{}
+  @type seen_includes :: %{optional(String.t()) => true}
 
   @spec new(keyword()) :: t()
   def new(opts \\ []) do
@@ -44,11 +48,99 @@ defmodule Beancount.Engine.Elixir.Ledger do
 
   @spec process(t(), [Beancount.Directive.t()]) :: t()
   def process(%__MODULE__{} = ledger, directives) do
+    {directives, ledger} = expand_includes(directives, ledger)
+    directives = apply_tag_scopes(directives)
     ledger = index_accounts(ledger, directives)
+    ordered = DirectiveSort.order(directives)
 
-    Enum.reduce(Enum.with_index(directives), ledger, fn {directive, _index}, ledger ->
+    Enum.reduce(ordered, ledger, fn directive, ledger ->
       apply_directive(directive, ledger)
     end)
+  end
+
+  # Beancount applies pushtag/poptag scopes at parse time, in file order. We bake
+  # the active tags into each transaction here (before the date sort) so scoping
+  # follows authored order rather than chronological order.
+  defp apply_tag_scopes(directives) do
+    {tagged, _stack} =
+      Enum.map_reduce(directives, [], fn
+        %PushTag{tag: tag}, stack ->
+          {%PushTag{tag: tag}, [tag | stack]}
+
+        %PopTag{tag: tag}, stack ->
+          {%PopTag{tag: tag}, List.delete(stack, tag)}
+
+        %Transaction{tags: tags} = txn, stack ->
+          {%{txn | tags: Enum.uniq(tags ++ Enum.reverse(stack))}, stack}
+
+        other, stack ->
+          {other, stack}
+      end)
+
+    tagged
+  end
+
+  defp expand_includes(directives, ledger) do
+    seen =
+      case ledger.include_base do
+        nil -> %{}
+        base -> %{Path.expand(base) => true}
+      end
+
+    {expanded, errors} = do_expand(directives, ledger.include_base, seen)
+    {expanded, Enum.reduce(errors, ledger, &add_error(&2, &1))}
+  end
+
+  @spec do_expand([Beancount.directive()], String.t() | nil, seen_includes()) ::
+          {[Beancount.directive()], [String.t()]}
+  defp do_expand(directives, base, seen) do
+    Enum.reduce(directives, {[], []}, fn
+      %Include{path: path}, {acc, errs} ->
+        {child_dirs, child_errs} = load_include(path, base, seen)
+        {acc ++ child_dirs, errs ++ child_errs}
+
+      other, {acc, errs} ->
+        {acc ++ [other], errs}
+    end)
+  end
+
+  @spec load_include(String.t(), String.t() | nil, seen_includes()) ::
+          {[Beancount.directive()], [String.t()]}
+  defp load_include(path, base, seen) do
+    case resolve_include_path(path, base) do
+      {:ok, resolved} ->
+        expand_resolved_include(path, resolved, seen)
+
+      :error ->
+        {[], ["File glob \"#{path}\" does not match any files"]}
+    end
+  end
+
+  @spec expand_resolved_include(String.t(), String.t(), seen_includes()) ::
+          {[Beancount.directive()], [String.t()]}
+  defp expand_resolved_include(path, resolved, seen) do
+    absolute = Path.expand(resolved)
+
+    if Map.has_key?(seen, absolute) do
+      {[], ["Include cycle detected for #{path}"]}
+    else
+      read_and_expand_include(path, resolved, Map.put(seen, absolute, true))
+    end
+  end
+
+  @spec read_and_expand_include(String.t(), String.t(), seen_includes()) ::
+          {[Beancount.directive()], [String.t()]}
+  defp read_and_expand_include(path, resolved, seen) do
+    with {:ok, text} <- File.read(resolved),
+         {:ok, child} <- Beancount.Parser.parse_text(text) do
+      do_expand(child, resolved, seen)
+    else
+      {:error, %{message: message}} ->
+        {[], ["Include #{path}: #{message}"]}
+
+      {:error, reason} ->
+        {[], ["Cannot read include #{path}: #{inspect(reason)}"]}
+    end
   end
 
   defp index_accounts(ledger, directives) do
@@ -95,13 +187,6 @@ defmodule Beancount.Engine.Elixir.Ledger do
 
     ledger = %{ledger | options: options}
     Enum.reduce(errors, ledger, fn %{message: message}, ledger -> add_error(ledger, message) end)
-  end
-
-  defp apply_directive(%Include{path: path}, ledger) do
-    case resolve_include(path, ledger.include_base) do
-      :ok -> ledger
-      {:error, message} -> add_error(ledger, message)
-    end
   end
 
   defp apply_directive(%Open{}, ledger), do: ledger
@@ -245,7 +330,7 @@ defmodule Beancount.Engine.Elixir.Ledger do
 
   defp validate_totals_balanced(ledger, postings) do
     totals = PostingAmount.transaction_totals(postings)
-    amounts = tolerance_amounts(postings)
+    amounts = tolerance_amounts(postings, ledger.options.infer_tolerance_from_cost)
 
     Enum.reduce(totals, ledger, fn {currency, total}, ledger ->
       apply_balance_tolerance(ledger, currency, total, amounts)
@@ -285,11 +370,23 @@ defmodule Beancount.Engine.Elixir.Ledger do
     end
   end
 
-  defp tolerance_amounts(postings) do
-    postings
-    |> PostingAmount.expand_postings()
-    |> Enum.flat_map(&posting_tolerance_amounts/1)
+  defp tolerance_amounts(postings, infer_from_cost) do
+    expanded = PostingAmount.expand_postings(postings)
+    base = Enum.flat_map(expanded, &posting_tolerance_amounts/1)
+
+    if infer_from_cost do
+      base ++ Enum.flat_map(expanded, &cost_tolerance_amounts/1)
+    else
+      base
+    end
   end
+
+  defp cost_tolerance_amounts(%Posting{cost: %CostSpec{per_amount: %Decimal{} = per}}), do: [per]
+
+  defp cost_tolerance_amounts(%Posting{cost: %CostSpec{total_amount: %Decimal{} = total}}),
+    do: [total]
+
+  defp cost_tolerance_amounts(_), do: []
 
   defp posting_tolerance_amounts(%Posting{amount: %Decimal{} = amount, currency: currency})
        when is_binary(currency),
@@ -355,17 +452,16 @@ defmodule Beancount.Engine.Elixir.Ledger do
   defp balance_key(%Balance{account: account, currency: currency, date: date}),
     do: {account, currency, date}
 
-  defp resolve_include(path, base) do
+  defp resolve_include_path(path, base) do
     candidates =
       case base do
         nil -> [path]
         base -> [path, Path.join(Path.dirname(base), path)]
       end
 
-    if Enum.any?(candidates, &File.exists?/1) do
-      :ok
-    else
-      {:error, "File glob \"#{path}\" does not match any files"}
+    case Enum.find(candidates, &File.exists?/1) do
+      nil -> :error
+      resolved -> {:ok, resolved}
     end
   end
 

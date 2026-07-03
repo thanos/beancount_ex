@@ -206,6 +206,24 @@ defmodule Beancount.Engine.ElixirTest do
     assert ["Assets:Stocks", "10 AAPL", "1500 USD"] in rows
   end
 
+  test "query/2 rounds holdings cost to two decimal places" do
+    text = """
+    2026-01-01 open Assets:Stocks AAPL
+    2026-01-01 open Assets:Cash USD
+
+    2026-01-02 * "Buy"
+      Assets:Stocks  3 AAPL {33.333 USD}
+      Assets:Cash  -99.999 USD
+    """
+
+    holdings_bql =
+      "SELECT account, units(sum(position)) AS units, cost(sum(position)) AS cost WHERE account ~ \"^Assets\" GROUP BY account ORDER BY account"
+
+    assert {:ok, %Beancount.Query.Result{rows: rows}} = NativeEngine.query(text, holdings_bql)
+
+    assert ["Assets:Stocks", "3 AAPL", "100 USD"] in rows
+  end
+
   test "query/2 returns parse and unsupported BQL errors" do
     assert {:error, %Beancount.Result{status: :error}} =
              NativeEngine.query("2026-01-01 open", balances_bql())
@@ -214,6 +232,22 @@ defmodule Beancount.Engine.ElixirTest do
              NativeEngine.query(@ledger, "SELECT not_supported")
 
     assert stdout =~ "unsupported native BQL"
+  end
+
+  test "query/2 returns parse errors for invalid ledger text" do
+    assert {:error, %Beancount.Result{normalized: %{errors: [_ | _]}}} =
+             NativeEngine.query("2026-01-01 open", balances_bql())
+  end
+
+  test "check_file/1 returns parse errors from invalid file content" do
+    path =
+      Path.join(System.tmp_dir!(), "elixir_engine_bad_#{System.unique_integer([:positive])}.bean")
+
+    File.write!(path, "2026-01-01 open")
+    on_exit(fn -> File.rm(path) end)
+
+    assert {:error, %Beancount.Result{normalized: %{errors: [_ | _]}}} =
+             NativeEngine.check_file(path)
   end
 
   test "render/1 delegates to the renderer" do

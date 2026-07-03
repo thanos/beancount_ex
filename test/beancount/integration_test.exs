@@ -65,7 +65,7 @@ defmodule Beancount.IntegrationTest do
   end
 
   @tag :beancount
-  property "CLI and Elixir engines agree within the v0.3 parity contract" do
+  property "CLI and Elixir engines agree on generated ledgers" do
     check all(ledger <- Beancount.Property.ledger(), max_runs: 25) do
       assert {:ok, :equivalent} =
                Beancount.Compare.compare(Beancount.Engine.CLI, Beancount.Engine.Elixir, ledger)

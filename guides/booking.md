@@ -1,6 +1,6 @@
 # Booking engine
 
-`Beancount.Engine.Elixir` implements native inventory booking for v0.4:
+`Beancount.Engine.Elixir` implements native inventory booking for the native engine:
 
 - **FIFO / LIFO / NONE**: consume lots oldest-first, newest-first, or allow shorts.
 - **STRICT**: reductions with explicit cost specs must match exactly one lot.

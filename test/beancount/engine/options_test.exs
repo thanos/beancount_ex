@@ -92,15 +92,48 @@ defmodule Beancount.Engine.Elixir.OptionsTest do
     assert Decimal.equal?(options.tolerance_multiplier, Decimal.new("2"))
   end
 
-  test "apply/2 ignores title and unknown options" do
+  test "apply/2 rejects invalid tolerance_multiplier" do
+    {_options, errors} =
+      Options.apply(Options.new(), option("tolerance_multiplier", "not-a-number"))
+
+    assert [%{message: message}] = errors
+    assert message =~ "tolerance_multiplier"
+  end
+
+  test "apply/2 rejects non-string inferred_tolerance_default values" do
+    {_options, errors} =
+      Options.apply(Options.new(), option("inferred_tolerance_default", true))
+
+    assert [%{message: message}] = errors
+    assert message =~ "inferred_tolerance_default"
+  end
+
+  test "apply/2 rejects invalid infer_tolerance_from_cost strings" do
+    {_options, errors} =
+      Options.apply(Options.new(), option("infer_tolerance_from_cost", "MAYBE"))
+
+    assert [%{message: message}] = errors
+    assert message =~ "syntax error"
+  end
+
+  test "apply/2 ignores title and other known-but-unmodeled options" do
     options = Options.new()
 
     {unchanged, errors} = Options.apply(options, option("title", "Example"))
     assert errors == []
     assert unchanged == options
 
-    {unchanged, errors} = Options.apply(options, option("unknown_option", "value"))
+    {unchanged, errors} = Options.apply(options, option("render_commas", "TRUE"))
     assert errors == []
     assert unchanged == options
+  end
+
+  test "apply/2 rejects unknown option names (bean-check parity)" do
+    options = Options.new()
+
+    {unchanged, errors} = Options.apply(options, option("unknown_option", "value"))
+
+    assert unchanged == options
+    assert [%{message: "Invalid option: 'unknown_option'"}] = errors
   end
 end

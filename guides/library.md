@@ -1,11 +1,11 @@
 # Library guides
 
 These guides document **how `beancount_ex` is implemented**: parsing, rendering,
-engines, testing, and oracle comparison. Use them when contributing to the
-library or swapping execution backends.
+engines, storage, testing, and oracle comparison. Use them when contributing to
+the library or swapping execution backends.
 
 If you are building an application or accounting UI, start with the
-[Accounting guides](accounting/README.md) instead.
+[Accounting guides](accounting/index.md) instead.
 
 ## Parsing and rendering
 
@@ -18,8 +18,10 @@ If you are building an application or accounting UI, start with the
 - [Booking](booking.md) - inventory booking in the native engine
 - [Querying](querying.md) - BQL and `Beancount.Query`
 - [Reporting](reporting.md) - `Beancount.Report` helpers
+- [Queries](queries.md) - Ecto.Query for ad-hoc database queries
+- [Storage](storage.md) - Ecto storage, SQLite, import/export
 
-## Quality and parity
+## Quality
 
 - [Golden files](golden_files.md) - fixture regression tests
 - [Property testing](property_testing.md) - generative ledgers

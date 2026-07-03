@@ -3,14 +3,7 @@ defmodule Beancount.ReportTest do
 
   alias Beancount.Query.Result
 
-  @ledger [
-    Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"]),
-    Beancount.open(~D[2026-01-01], "Income:Salary", ["USD"]),
-    Beancount.transaction(~D[2026-01-31], "*", "Employer", "Salary", [
-      Beancount.posting("Assets:Bank", Decimal.new("5000"), "USD"),
-      Beancount.posting("Income:Salary", Decimal.new("-5000"), "USD")
-    ])
-  ]
+  @ledger Beancount.TestFixtures.salary_ledger()
 
   setup do
     Beancount.FakeBeanQuery.install!()
@@ -25,10 +18,16 @@ defmodule Beancount.ReportTest do
     assert {:ok, %Result{}} = Beancount.Report.balances("2026-01-01 open Assets:Bank USD\n")
   end
 
-  test "balance_sheet/1, income_statement/1, holdings/1 dispatch successfully" do
-    assert {:ok, %Result{}} = Beancount.Report.balance_sheet(@ledger)
-    assert {:ok, %Result{}} = Beancount.Report.income_statement(@ledger)
-    assert {:ok, %Result{}} = Beancount.Report.holdings(@ledger)
+  test "balance_sheet/1, income_statement/1, holdings/1 parse the fake CSV payload" do
+    # FakeBeanQuery returns a fixed account,balance CSV regardless of the query,
+    # so every CLI-dispatched report should parse the same columns and rows.
+    for report <- [:balance_sheet, :income_statement, :holdings] do
+      assert {:ok, %Result{columns: ["account", "balance"], rows: rows}} =
+               apply(Beancount.Report, report, [@ledger])
+
+      assert ["Assets:Bank", "5000 USD"] in rows
+      assert ["Income:Salary", "-5000 USD"] in rows
+    end
   end
 
   test "journal/2 quotes the account into the query" do

@@ -2,6 +2,8 @@ defmodule Beancount.ReconciliationTest do
   use ExUnit.Case, async: false
 
   alias Beancount.Engine.CLI
+  alias Beancount.Engine.Elixir, as: NativeEngine
+  alias Beancount.Result
 
   @fixture Path.join([
              "test",
@@ -56,26 +58,7 @@ defmodule Beancount.ReconciliationTest do
   @tag :integration
   @tag :beancount
   @tag :reconciliation
-  test "example.beancount compare/3 returns a structured result" do
-    original = File.read!(@fixture)
-
-    result =
-      Beancount.Compare.compare(
-        Beancount.Engine.CLI,
-        Beancount.Engine.Elixir,
-        original
-      )
-
-    assert match?({:ok, :equivalent}, result) or
-             match?({:error, %Beancount.Property.Diff{}}, result)
-  end
-
-  @tag :integration
-  @tag :beancount
-  @tag :reconciliation
-  @tag :reconciliation_compare
-  @tag :skip
-  test "example.beancount native engine agrees with CLI oracle" do
+  test "example.beancount compare/3 is equivalent" do
     original = File.read!(@fixture)
 
     assert {:ok, :equivalent} =
@@ -84,5 +67,16 @@ defmodule Beancount.ReconciliationTest do
                Beancount.Engine.Elixir,
                original
              )
+  end
+
+  @tag :integration
+  @tag :beancount
+  @tag :reconciliation
+  test "example.beancount native check matches CLI" do
+    original = File.read!(@fixture)
+
+    assert {:ok, %Result{status: :ok}} = CLI.check(original)
+
+    assert {:ok, %Result{status: :ok}} = NativeEngine.check(original)
   end
 end

@@ -7,10 +7,16 @@ defmodule Beancount.Compare do
   `holdings`).
   """
 
+  alias Beancount.CostSpec
+  alias Beancount.Directives.Posting
   alias Beancount.Engine.Elixir.ErrorCategory
+  alias Beancount.Parser.Posting, as: PostingParser
   alias Beancount.Property.Diff
   alias Beancount.Query.Result, as: QueryResult
+  alias Beancount.Renderer
   alias Beancount.Result
+
+  @position_account "Assets:Compare"
 
   @canned_queries [
     {"balances", "SELECT account, sum(position) AS balance GROUP BY account ORDER BY account"},
@@ -157,8 +163,6 @@ defmodule Beancount.Compare do
   # does not. When only one side has uncategorized messages, treat them as
   # equivalent if categories already match.
   defp other_errors_equivalent?([], []), do: true
-  defp other_errors_equivalent?([], _oracle), do: true
-  defp other_errors_equivalent?(_native, []), do: true
   defp other_errors_equivalent?(left, right), do: left == right
 
   defp equivalent_query?(%QueryResult{} = left, %QueryResult{} = right) do
@@ -198,24 +202,90 @@ defmodule Beancount.Compare do
     cell
     |> String.split(",")
     |> Enum.map(&String.trim/1)
-    |> Enum.reject(&(&1 == ""))
+    |> Enum.reject(&(&1 == "" or zero_position?(&1)))
     |> Enum.map(&normalize_decimal_string/1)
+    |> merge_position_lots()
     |> Enum.sort()
     |> Enum.join(", ")
   end
 
-  defp normalize_decimal_string(cell) do
-    case Regex.run(~r/^(-?\d+(?:\.\d+)?)\s+(.+)$/, cell) do
-      [_, number, currency] ->
-        normalized =
-          number |> Decimal.new() |> Decimal.normalize() |> Decimal.to_string(:normal)
-
-        normalized <> " " <> currency
-
-      _ ->
-        cell
+  defp zero_position?(segment) do
+    case parse_position_segment(segment) do
+      {:ok, %Posting{amount: %Decimal{} = amount}} -> Decimal.equal?(amount, 0)
+      _ -> false
     end
   end
+
+  defp merge_position_lots(segments) do
+    merged =
+      Enum.reduce(segments, %{}, fn segment, acc ->
+        merge_position_segment(acc, segment)
+      end)
+
+    Enum.map(merged, &format_merged_position/1)
+  end
+
+  defp merge_position_segment(acc, segment) do
+    case parse_position_segment(segment) do
+      {:ok, %Posting{amount: %Decimal{} = amount, currency: currency} = posting}
+      when is_binary(currency) ->
+        key = {currency, cost_key(posting.cost)}
+
+        Map.update(acc, key, amount, &Decimal.add(&1, amount))
+
+      _ ->
+        Map.put(acc, {segment, :unique}, Decimal.new(1))
+    end
+  end
+
+  defp format_merged_position({{commodity, ""}, units}),
+    do: format_position_units(units, commodity, nil)
+
+  defp format_merged_position({{commodity, cost_suffix}, units}) when is_binary(cost_suffix),
+    do: format_position_units(units, commodity, cost_suffix)
+
+  defp format_merged_position({{segment, :unique}, _}), do: segment
+
+  defp format_position_units(units, commodity, cost_suffix) do
+    amount = units |> Decimal.normalize() |> Renderer.format_decimal()
+    base = amount <> " " <> commodity
+
+    case cost_suffix do
+      nil -> base
+      "" -> base
+      suffix -> base <> " " <> suffix
+    end
+  end
+
+  defp parse_position_segment(segment) do
+    trimmed = String.trim(segment)
+
+    PostingParser.parse_line("#{@position_account} #{trimmed}", line: 0)
+  end
+
+  defp cost_key(nil), do: ""
+
+  defp cost_key(cost) do
+    cost
+    |> CostSpec.normalize()
+    |> CostSpec.to_string()
+  end
+
+  defp normalize_decimal_string(cell) do
+    case parse_position_segment(cell) do
+      {:ok, posting} -> format_position_posting(posting)
+      _ -> cell
+    end
+  end
+
+  defp format_position_posting(
+         %Posting{amount: %Decimal{} = amount, currency: currency} = posting
+       )
+       when is_binary(currency) do
+    format_position_units(amount, currency, cost_key(posting.cost))
+  end
+
+  defp format_position_posting(_), do: ""
 
   # Lines bean-check prints as context below a real error (not standalone messages).
   defp cli_context_line?(message) when is_binary(message) do

@@ -10,7 +10,7 @@ if Code.ensure_loaded?(StreamData) do
     This module is only compiled when `StreamData` is available (the `:test`
     and `:dev` environments).
 
-    ## Oracle comparison (v0.3)
+    ## Oracle comparison
 
     Use `Beancount.Property.compare/3` (or `Beancount.Compare.compare/3`) to
     validate a native engine against the CLI oracle on identical input.
@@ -176,7 +176,8 @@ if Code.ensure_loaded?(StreamData) do
     end
 
     @doc """
-    Compare two engines on identical input within the v0.3 parity contract.
+    Compare two engines on identical input within the parity contract enforced
+    by `Beancount.Compare.compare/3`.
 
     Delegates to `Beancount.Compare.compare/3`.
 

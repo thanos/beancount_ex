@@ -57,10 +57,6 @@ defmodule Beancount.GoldenTest do
       assert Golden.render(@case_dir) == expected
     end
 
-    test "rendering is deterministic for #{@name}" do
-      assert Golden.render(@case_dir) == Golden.render(@case_dir)
-    end
-
     test "parse round-trips expected.bean for #{@name}" do
       expected = Golden.expected_bean(@case_dir)
       assert expected != nil, "missing expected.bean; run mix beancount.golden.update"

@@ -1,8 +1,8 @@
 defmodule Beancount.MixProject do
   use Mix.Project
 
-  @version "0.4.0"
-  @source_url "https://github.com/beancount-ex/beancount_ex"
+  @version "0.6.0"
+  @source_url "https://github.com/thanos/beancount_ex"
 
   def project do
     [
@@ -44,20 +44,21 @@ defmodule Beancount.MixProject do
     ]
   end
 
-  defp elixirc_paths(:test), do: ["lib", "test/support"]
-  defp elixirc_paths(_env), do: ["lib"]
+  defp elixirc_paths(:test), do: ["lib", "test/support", "priv/repo"]
+  defp elixirc_paths(_env), do: ["lib", "priv/repo"]
 
   defp deps do
     [
-      {:decimal, "~> 3.1", override: true},
+      {:decimal, "~> 3.1"},
       {:jason, "~> 1.4"},
-      {:nimble_parsec, "~> 1.4"},
-      {:explorer, "~> 0.11.1", optional: true},
+      {:ecto_sql, "~> 3.12"},
+      {:ecto_sqlite3, "~> 0.18"},
       {:stream_data, "~> 1.0", only: [:test, :dev]},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.4", only: [:dev], runtime: false},
       {:excoveralls, "~> 0.18", only: :test},
-      {:ex_doc, "~> 0.34", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.34", only: :dev, runtime: false},
+      {:benchee, "~> 1.3", only: :dev}
     ]
   end
 
@@ -71,8 +72,25 @@ defmodule Beancount.MixProject do
   defp package do
     [
       licenses: ["MIT"],
+      maintainers: ["Thanos Vassilakis"],
       links: %{"GitHub" => @source_url},
-      files: ~w(lib guides .formatter.exs mix.exs README.md CHANGELOG.md LICENSE)
+      files: ~w(lib guides .formatter.exs mix.exs README.md CHANGELOG.md LICENSE),
+      keywords: [
+        "beancount",
+        "accounting",
+        "double-entry",
+        "ledger",
+        "personal-finance",
+        "plain-text-accounting",
+        "elixir",
+        "ecto",
+        "parser",
+        "bean-check",
+        "bean-query",
+        "bql",
+        "inventory",
+        "oracle"
+      ]
     ]
   end
 
@@ -80,10 +98,11 @@ defmodule Beancount.MixProject do
     [
       main: "readme",
       extras: [
+        "README.md",
         "CHANGELOG.md",
         "LICENSE",
         "guides/library.md",
-        "guides/accounting/README.md",
+        "guides/accounting/index.md",
         "guides/accounting/getting_started.md",
         "guides/accounting/in_context.md",
         "guides/accounting/cookbook.md",
@@ -93,7 +112,9 @@ defmodule Beancount.MixProject do
         "guides/rendering.md",
         "guides/engines.md",
         "guides/querying.md",
+        "guides/queries.md",
         "guides/reporting.md",
+        "guides/storage.md",
         "guides/golden_files.md",
         "guides/booking.md",
         "guides/reconciliation.md",
@@ -108,11 +129,17 @@ defmodule Beancount.MixProject do
       groups_for_extras: [
         Accounting: ~r/guides\/(accounting\/|getting_started\.md)/,
         Library:
-          ~r/guides\/(parsing|rendering|engines|querying|reporting|golden_files|booking|reconciliation|performance|property_testing|oracle_strategy|library)\./,
+          ~r/guides\/(parsing|rendering|engines|querying|queries|reporting|storage|golden_files|booking|reconciliation|performance|property_testing|oracle_strategy|library)\./,
         Livebooks: ~r/guides\/livebook\//
       ],
       groups_for_modules: [
-        "Public API": [Beancount, Beancount.Parser, Beancount.Compare],
+        "Public API": [
+          Beancount,
+          Beancount.Parser,
+          Beancount.Compare,
+          Beancount.Queries,
+          Beancount.Storage
+        ],
         Directives: ~r/Beancount\.Directives\..*/,
         Engine: [
           Beancount.Engine,
@@ -124,6 +151,7 @@ defmodule Beancount.MixProject do
         Rendering: [Beancount.Directive, Beancount.Renderer],
         Reporting: [Beancount.Report, Beancount.Query.Result, Beancount.Explorer],
         Results: [Beancount.Result, Beancount.Normalizer],
+        Storage: [Beancount.Repo, Beancount.Schemas, ~r/Beancount\.Schemas\..*/],
         Testing: [Beancount.Golden, Beancount.Property]
       ],
       source_ref: "v#{@version}"
@@ -132,7 +160,7 @@ defmodule Beancount.MixProject do
 
   defp dialyzer do
     [
-      plt_add_apps: [:mix, :ex_unit],
+      plt_add_apps: [:mix, :ex_unit, :ecto],
       plt_core_path: "priv/plts",
       plt_local_path: "priv/plts"
     ]

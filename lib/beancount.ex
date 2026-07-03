@@ -5,9 +5,12 @@ defmodule Beancount do
   `beancount_ex` is **not** a General Ledger. It is a compatibility layer and
   *behavioral oracle*: it constructs Beancount directives as typed Elixir
   structs, renders them to deterministic `.bean` text, and validates them
-  through a configurable engine. Today that engine wraps real Beancount; a
-  future native Elixir (or Rust) engine can replace it **without changing this
-  public API**.
+  through a configurable engine. The default engine wraps real Beancount
+  (`bean-check` / `bean-query`); the native `Beancount.Engine.Elixir` can
+  replace it **without changing this public API**.
+
+  Optional persistence: `Beancount.Storage` stores directives in SQLite via
+  Ecto; `Beancount.Queries` reads them back without running the booking engine.
 
   ## Quick start
 
@@ -524,7 +527,7 @@ defmodule Beancount do
 
   ## Examples
 
-  With the native engine (no `bean-check` required):
+  With the configured engine:
 
       ledger = [
         Beancount.open(~D[2026-01-01], "Assets:Bank", ["USD"]),
@@ -535,8 +538,7 @@ defmodule Beancount do
         ])
       ]
 
-      {:ok, %Beancount.Result{status: :ok}} =
-        ledger |> Beancount.render() |> Beancount.Engine.Elixir.check()
+      {:ok, %Beancount.Result{status: :ok}} = Beancount.check(ledger)
 
   """
   @spec check([directive()]) :: {:ok, Beancount.Result.t()} | {:error, Beancount.Result.t()}
@@ -641,7 +643,10 @@ defmodule Beancount do
       \"\"\"
 
       {:ok, result} =
-        Beancount.Engine.Elixir.query(text, "SELECT account, sum(position) GROUP BY account")
+        Beancount.Engine.Elixir.query(
+          text,
+          "SELECT account, sum(position) AS balance GROUP BY account ORDER BY account"
+        )
 
       result.columns
       # => ["account", "balance"]
@@ -670,7 +675,10 @@ defmodule Beancount do
       \"\"\")
 
       {:ok, _} =
-        Beancount.Engine.Elixir.query(File.read!(path), "SELECT account GROUP BY account")
+        Beancount.Engine.Elixir.query(
+          File.read!(path),
+          "SELECT account, sum(position) AS balance GROUP BY account ORDER BY account"
+        )
 
   """
   @spec query_file(Path.t(), binary()) :: query_return()
