@@ -33,9 +33,9 @@ defmodule Beancount.FakeBeanQuery do
     # only the well-defined \r and \n escapes are interpreted (portable across
     # dash/bash). Any single quotes inside a cell are escaped for the shell.
     rows =
-      @csv_rows
-      |> Enum.map(fn row -> "'" <> String.replace(row, "'", ~S('\'')) <> "'" end)
-      |> Enum.join(" ")
+      Enum.map_join(@csv_rows, " ", fn row ->
+        "'" <> String.replace(row, "'", ~S('\'')) <> "'"
+      end)
 
     File.write!(script, """
     #!/bin/sh
